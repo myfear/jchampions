@@ -13,6 +13,7 @@ node_modules/
 src/main/resources/META-INF/speaker/
 banners/
 speaker-banners
+jchampions-banners/
 
 *.sql_
 

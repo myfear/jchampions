@@ -236,8 +236,6 @@ public class ImportFromCSV {
                 talk.title = title;
                 talk.description = emptyToNull(fields[COL_DESCRIPTION]);
                 talk.scheduledDuration = emptyToNull(fields[COL_SCHEDULED_DURATION]);
-                String liveLink = emptyToNull(fields[COL_LIVE_LINK]);
-                LOG.infof(">>>>>>>>>>>>>>>> Processing liveLink for session %d: '%s'", sessionId, liveLink);
                 talk.liveLink = emptyToNull(fields[COL_LIVE_LINK]);
                 String scheduledAt = fields[COL_SCHEDULED_AT].trim();
                 if (!scheduledAt.isEmpty()) {
