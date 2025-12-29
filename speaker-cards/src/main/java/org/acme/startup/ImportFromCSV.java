@@ -39,14 +39,20 @@ public class ImportFromCSV {
     private static final int COL_SESSION_ID = 0; // Session Id
     private static final int COL_TITLE = 1; // Title
     private static final int COL_DESCRIPTION = 2; // Description
+    private static final int COL_COMPANY_URL = 3; // Company URL
     private static final int COL_SCHEDULED_AT = 8; // Scheduled At
     private static final int COL_SCHEDULED_DURATION = 9; // Scheduled Duration
     private static final int COL_LIVE_LINK = 10; // Live Link
     private static final int COL_SPEAKER_ID = 12; // Speaker Id
     private static final int COL_FIRST_NAME = 13; // FirstName
     private static final int COL_LAST_NAME = 14; // LastName
+    private static final int COL_COMPANY = 15;  // Company
     private static final int COL_TAG_LINE = 16; // TagLine
     private static final int COL_BIO = 17; // Bio
+    private static final int COL_TWITTER = 18; // Twitter Handle
+    private static final int COL_LINKEDIN = 19; // LinkedIn Profile
+    private static final int COL_GITHUB = 20; // GitHub Username
+    private static final int COL_BLOG_URL = 21; // Blog/Website URL
     private static final int COL_PROFILE_PICTURE = 22; // Profile Picture
 
     // EST timezone (America/New_York)
@@ -164,7 +170,8 @@ public class ImportFromCSV {
         }
 
         try {
-            UUID speakerId = UUID.fromString(speakerIdStr);
+            //UUID speakerId = UUID.fromString(speakerIdStr);
+            UUID speakerId = UUID.nameUUIDFromBytes("speaker-%s".formatted(speakerIdStr).getBytes());
             Speaker speaker = Speaker.findById(speakerId);
             boolean isNew = (speaker == null);
 
@@ -177,6 +184,12 @@ public class ImportFromCSV {
             speaker.lastName = emptyToNull(fields[COL_LAST_NAME]);
             speaker.title = emptyToNull(fields[COL_TAG_LINE]);
             speaker.biography = emptyToNull(fields[COL_BIO]);
+            speaker.company = emptyToNull(fields[COL_COMPANY]);
+            speaker.companyURL = emptyToNull(fields[COL_COMPANY_URL]);
+            speaker.twitterAccount = emptyToNull(fields[COL_TWITTER]);
+            speaker.linkedInAccount = emptyToNull(fields[COL_LINKEDIN]);
+            speaker.githubAccount = emptyToNull(fields[COL_GITHUB]);
+            speaker.blogURL = emptyToNull(fields[COL_BLOG_URL]);
             speaker.star = false;
 
             if (isNew) {
@@ -223,8 +236,9 @@ public class ImportFromCSV {
                 talk.title = title;
                 talk.description = emptyToNull(fields[COL_DESCRIPTION]);
                 talk.scheduledDuration = emptyToNull(fields[COL_SCHEDULED_DURATION]);
+                String liveLink = emptyToNull(fields[COL_LIVE_LINK]);
+                LOG.infof(">>>>>>>>>>>>>>>> Processing liveLink for session %d: '%s'", sessionId, liveLink);
                 talk.liveLink = emptyToNull(fields[COL_LIVE_LINK]);
-
                 String scheduledAt = fields[COL_SCHEDULED_AT].trim();
                 if (!scheduledAt.isEmpty()) {
                     try {

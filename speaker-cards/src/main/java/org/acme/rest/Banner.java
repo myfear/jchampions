@@ -117,7 +117,6 @@ public class Banner extends Controller {
     public Response speakerPhoto(@RestPath UUID id, Request request) {
         Speaker speaker = Speaker.findById(id);
         notFoundIfNull(speaker);
-
         // Try to find speaker image in resources/META-INF/speaker/{id}.{ext}
         String[] extensions = { ".jpg", ".png", ".jpeg" };
         String resourcePath = null;
@@ -133,6 +132,7 @@ public class Banner extends Controller {
                     // Ignore
                 }
                 resourcePath = testPath;
+
                 // Determine MIME type based on extension
                 if (ext.equals(".png")) {
                     mimeType = "image/png";

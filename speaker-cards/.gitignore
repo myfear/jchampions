@@ -14,8 +14,6 @@ src/main/resources/META-INF/speaker/
 banners/
 speaker-banners
 
-SelectedWithSchedule.xlsx
-
 *.sql_
 
 # Eclipse
