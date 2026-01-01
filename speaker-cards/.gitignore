@@ -13,8 +13,7 @@ node_modules/
 src/main/resources/META-INF/speaker/
 banners/
 speaker-banners
-
-SelectedWithSchedule.xlsx
+jchampions-banners/
 
 *.sql_
 
