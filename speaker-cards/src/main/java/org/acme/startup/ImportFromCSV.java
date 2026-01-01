@@ -1,321 +1,255 @@
 package org.acme.startup;
 
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.net.URI;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.UUID;
+import io.quarkus.runtime.*;
+import jakarta.enterprise.context.*;
+import jakarta.enterprise.event.*;
+import jakarta.inject.*;
+import jakarta.transaction.*;
+import org.acme.model.*;
+import org.acme.model.dto.*;
+import org.apache.camel.*;
+import org.apache.camel.dataformat.bindy.csv.*;
+import org.apache.camel.support.*;
+import org.jboss.logging.*;
 
-import org.acme.model.Speaker;
-import org.acme.model.Talk;
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.DateUtil;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.jboss.logging.Logger;
-
-import io.quarkus.runtime.StartupEvent;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.event.Observes;
-import jakarta.transaction.Transactional;
+import java.io.*;
+import java.net.*;
+import java.nio.file.*;
+import java.time.*;
+import java.time.format.*;
+import java.util.*;
 
 @ApplicationScoped
-public class ImportFromCSV {
+public class ImportFromCSV
+{
+  private static final Logger LOG = Logger.getLogger(ImportFromCSV.class);
 
-    private static final Logger LOG = Logger.getLogger(ImportFromCSV.class);
+  @Inject
+  CamelContext camelContext;
 
-    // XLSX column indices from SelectedWithSchedule.xlsx
-    private static final int COL_SESSION_ID = 0; // Session Id
-    private static final int COL_TITLE = 1; // Title
-    private static final int COL_DESCRIPTION = 2; // Description
-    private static final int COL_COMPANY_URL = 3; // Company URL
-    private static final int COL_SCHEDULED_AT = 8; // Scheduled At
-    private static final int COL_SCHEDULED_DURATION = 9; // Scheduled Duration
-    private static final int COL_LIVE_LINK = 10; // Live Link
-    private static final int COL_SPEAKER_ID = 12; // Speaker Id
-    private static final int COL_FIRST_NAME = 13; // FirstName
-    private static final int COL_LAST_NAME = 14; // LastName
-    private static final int COL_COMPANY = 15;  // Company
-    private static final int COL_TAG_LINE = 16; // TagLine
-    private static final int COL_BIO = 17; // Bio
-    private static final int COL_TWITTER = 18; // Twitter Handle
-    private static final int COL_LINKEDIN = 19; // LinkedIn Profile
-    private static final int COL_GITHUB = 20; // GitHub Username
-    private static final int COL_BLOG_URL = 21; // Blog/Website URL
-    private static final int COL_PROFILE_PICTURE = 22; // Profile Picture
+  // Timezone constants
+  private static final ZoneId EST_ZONE = ZoneId.of("America/New_York");
+  private static final ZoneId CET_ZONE = ZoneId.of("Europe/Paris");
+  private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
+  private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
-    // EST timezone (America/New_York)
-    private static final ZoneId EST_ZONE = ZoneId.of("America/New_York");
-    // CET timezone (Europe/Paris)
-    private static final ZoneId CET_ZONE = ZoneId.of("Europe/Paris");
+  void onStart(@Observes StartupEvent ev)
+  {
+    LOG.info(">>> CSV Import startup observer initialized. Import will run when explicitly triggered.");
+  }
 
-    // Time format for database: "HH:mm"
-    private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
-    // Date format for database: "yyyy-MM-dd"
-    private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+  @Transactional
+  public void importFromCSV(String csvFilePath)
+  {
+    LOG.infof(">>> Starting CSV import from: %s", csvFilePath);
 
-    void onStart(@Observes StartupEvent ev) {
-        LOG.info("XLSX Import startup observer initialized. Import will run when explicitly triggered.");
+    Path path = Paths.get(csvFilePath);
+    if (!Files.exists(path))
+    {
+      LOG.errorf("### CSV file not found: %s", csvFilePath);
+      return;
     }
 
-    @Transactional
-    public void importFromCSV(String xlsxFilePath) {
-        LOG.infof("Starting XLSX import from: %s", xlsxFilePath);
+    try
+    {
+      BindyCsvDataFormat bindy = new BindyCsvDataFormat(SpeakerTalkRow.class);
 
-        Path path = Paths.get(xlsxFilePath);
-        if (!Files.exists(path)) {
-            LOG.errorf("XLSX file not found: %s", xlsxFilePath);
-            return;
+      @SuppressWarnings("unchecked")
+      List<SpeakerTalkRow> rows = (List<SpeakerTalkRow>) bindy.unmarshal(
+        new DefaultExchange(camelContext),
+        Files.newInputStream(path)
+      );
+
+      LOG.infof(">>> Parsed %d rows from CSV", rows.size());
+
+      for (SpeakerTalkRow row : rows)
+        try
+        {
+          processRow(row);
+        }
+        catch (Exception e)
+        {
+          LOG.errorf(e, "### Error processing row for speaker %s: %s", row.speakerId, e.getMessage());
         }
 
-        try (FileInputStream fis = new FileInputStream(xlsxFilePath);
-                Workbook workbook = new XSSFWorkbook(fis)) {
+      LOG.infof(">>> CSV import completed. Processed %d rows", rows.size());
+    }
+    catch (Exception e)
+    {
+      LOG.errorf(e, "### Error reading CSV file: %s", csvFilePath);
+    }
+  }
 
-            Sheet sheet = workbook.getSheetAt(0);
-            Iterator<Row> rowIterator = sheet.iterator();
+  private void processRow(SpeakerTalkRow row)
+  {
+    Talk talk = createOrUpdateTalk(row);
+    Speaker speaker = createOrUpdateSpeaker(row);
 
-            // Skip header row
-            if (rowIterator.hasNext()) {
-                Row headerRow = rowIterator.next();
-                LOG.infof("XLSX header found with %d columns", headerRow.getLastCellNum());
-            }
+    if (speaker != null && talk != null)
+      if (!talk.speakers.contains(speaker))
+      {
+        talk.speakers.add(speaker);
+        speaker.talks.add(talk);
+        talk.persist();
+        speaker.persist();
+      }
+  }
 
-            int rowNumber = 0;
-            while (rowIterator.hasNext()) {
-                Row row = rowIterator.next();
-                rowNumber++;
+  private Speaker createOrUpdateSpeaker(SpeakerTalkRow row)
+  {
+    if (row.speakerId == null || row.speakerId.trim().isEmpty())
+      return null;
 
-                try {
-                    String[] fields = extractRowData(row);
-                    processRow(fields);
-                } catch (Exception e) {
-                    LOG.errorf(e, "Error processing row %d: %s", rowNumber, e.getMessage());
-                }
-            }
+    try
+    {
+      UUID speakerId = UUID.nameUUIDFromBytes("speaker-%s".formatted(row.speakerId.trim()).getBytes());
+      Speaker speaker = Speaker.findById(speakerId);
+      boolean isNew = (speaker == null);
 
-            LOG.infof("XLSX import completed. Processed %d rows", rowNumber);
-        } catch (Exception e) {
-            LOG.errorf(e, "Error reading XLSX file: %s", xlsxFilePath);
+      if (isNew)
+      {
+        speaker = new Speaker();
+        speaker.id = speakerId;
+      }
+
+      speaker.firstName = emptyToNull(row.firstName);
+      speaker.lastName = emptyToNull(row.lastName);
+      speaker.title = emptyToNull(row.tagLine);
+      speaker.biography = emptyToNull(row.bio);
+      speaker.companyURL = emptyToNull(row.companyUrl);
+      speaker.twitterAccount = emptyToNull(row.twitterHandle);
+      speaker.linkedInAccount = emptyToNull(row.linkedInProfile);
+      speaker.githubAccount = emptyToNull(row.githubUsername);
+      speaker.blogURL = emptyToNull(row.blogUrl);
+      speaker.star = false;
+
+      if (isNew)
+        speaker.persist();
+
+      String profilePictureUrl = emptyToNull(row.profilePictureUrl);
+      if (profilePictureUrl != null)
+        downloadProfilePicture(speakerId, profilePictureUrl);
+
+      LOG.debugf(">>> %s speaker: %s %s (%s)", isNew ? "Persisted" : "Updated",
+        speaker.firstName, speaker.lastName, speakerId);
+      return speaker;
+    }
+    catch (Exception e)
+    {
+      LOG.errorf(e, "### Error creating speaker: %s", e.getMessage());
+      return null;
+    }
+  }
+
+  private Talk createOrUpdateTalk(SpeakerTalkRow row)
+  {
+    if (row.sessionId == null || row.sessionId.trim().isEmpty())
+      return null;
+
+    try
+    {
+      Long sessionId = Long.parseLong(row.sessionId.trim());
+      Talk talk = Talk.findById(sessionId);
+      boolean isNew = (talk == null);
+
+      if (isNew)
+      {
+        if (emptyToNull(row.scheduledAt) != null)
+        {
+          LOG.warnf("### Skipping new talk with session ID %d: title is empty", sessionId);
+          return null;
         }
+
+        talk = new Talk();
+        talk.id = sessionId;
+        talk.title = row.title.trim();
+        talk.description = emptyToNull(row.description);
+        talk.scheduledDuration = emptyToNull(row.scheduledDuration);
+        talk.liveLink = emptyToNull(row.liveLink);
+
+        if ((emptyToNull(row.scheduledAt) != null))
+          try
+          {
+            LocalDateTime estDateTime = LocalDateTime.parse(row.scheduledAt.trim());
+            ZonedDateTime estZoned = estDateTime.atZone(EST_ZONE);
+            ZonedDateTime cetZoned = estZoned.withZoneSameInstant(CET_ZONE);
+            talk.date = cetZoned.format(DATE_FORMAT);
+            talk.estTime = estZoned.format(TIME_FORMAT);
+            talk.cetTime = cetZoned.format(TIME_FORMAT);
+          }
+          catch (Exception e)
+          {
+            LOG.warnf("Could not parse date '%s' for talk %d", row.scheduledAt, sessionId);
+          }
+
+        talk.persist();
+        LOG.debugf("Persisted talk: %s (%d)", talk.title, sessionId);
+      }
+      else
+      {
+        LOG.debugf("### Found existing talk: %s (%d) with %d speaker(s)", talk.title, sessionId,
+          talk.speakers.size());
+      }
+
+      return talk;
+    }
+    catch (Exception e)
+    {
+      LOG.errorf(e, "### Error creating talk: %s", e.getMessage());
+      return null;
+    }
+  }
+
+  private String emptyToNull(String value)
+  {
+    return (value == null || value.isBlank()) ? null : value.trim();
+  }
+
+  private void downloadProfilePicture(UUID speakerId, String profilePictureUrl)
+  {
+    if (profilePictureUrl == null || profilePictureUrl.isEmpty()) {
+      return;
     }
 
-    private String[] extractRowData(Row row) {
-        List<String> fields = new ArrayList<>();
-        // We need at least 23 columns (0-22) for Profile Picture
-        int lastColumn = Math.max(row.getLastCellNum(), 23);
-
-        for (int i = 0; i < lastColumn; i++) {
-            Cell cell = row.getCell(i);
-            fields.add(getCellValueAsString(cell));
+    try {
+      // Determine file extension from URL
+      String extension = "jpg"; // default
+      int lastDot = profilePictureUrl.lastIndexOf('.');
+      if (lastDot > 0) {
+        String urlExt = profilePictureUrl.substring(lastDot + 1).toLowerCase();
+        // Remove query parameters if any
+        int queryIndex = urlExt.indexOf('?');
+        if (queryIndex > 0) {
+          urlExt = urlExt.substring(0, queryIndex);
         }
+        if (urlExt.equals("jpg") || urlExt.equals("jpeg") || urlExt.equals("png") || urlExt.equals("gif")) {
+          extension = urlExt;
+        }
+      }
 
-        return fields.toArray(new String[0]);
+      // Target path: src/main/resources/META-INF/speaker/{Speaker Id}.{ext}
+      Path resourcesPath = Paths.get("src/main/resources/META-INF/speaker");
+      Files.createDirectories(resourcesPath);
+
+      Path imagePath = resourcesPath.resolve(speakerId.toString() + "." + extension);
+
+      // Check if file already exists
+      if (Files.exists(imagePath)) {
+        LOG.debugf("Profile picture already exists for speaker %s, skipping download", speakerId);
+        return;
+      }
+
+      // Download image
+      LOG.infof("Downloading profile picture for speaker %s from %s", speakerId, profilePictureUrl);
+      URI uri = URI.create(profilePictureUrl);
+
+      try (InputStream in = uri.toURL().openStream()) {
+        Files.copy(in, imagePath);
+        LOG.infof("Downloaded profile picture for speaker %s to %s", speakerId, imagePath);
+      }
+
+    } catch (Exception e) {
+      LOG.errorf(e, "Error downloading profile picture for speaker %s from %s", speakerId, profilePictureUrl);
     }
-
-    private String getCellValueAsString(Cell cell) {
-        if (cell == null) {
-            return "";
-        }
-
-        switch (cell.getCellType()) {
-            case STRING:
-                return cell.getStringCellValue();
-            case NUMERIC:
-                if (DateUtil.isCellDateFormatted(cell)) {
-                    // Return ISO format date-time string
-                    return cell.getLocalDateTimeCellValue().toString();
-                }
-                return String.valueOf((long) cell.getNumericCellValue());
-            case BOOLEAN:
-                return String.valueOf(cell.getBooleanCellValue());
-            case FORMULA:
-                return cell.getCellFormula();
-            case BLANK:
-                return "";
-            default:
-                return "";
-        }
-    }
-
-    private void processRow(String[] fields) {
-        Talk talk = createOrUpdateTalk(fields);
-        Speaker speaker = createOrUpdateSpeaker(fields);
-
-        // Establish bidirectional relationship
-        if (speaker != null && talk != null) {
-            if (!talk.speakers.contains(speaker)) {
-                talk.speakers.add(speaker);
-                speaker.talks.add(talk);
-                talk.persist();
-                speaker.persist();
-            }
-        }
-    }
-
-    private Speaker createOrUpdateSpeaker(String[] fields) {
-        String speakerIdStr = fields[COL_SPEAKER_ID].trim();
-        if (speakerIdStr.isEmpty()) {
-            return null;
-        }
-
-        try {
-            //UUID speakerId = UUID.fromString(speakerIdStr);
-            UUID speakerId = UUID.nameUUIDFromBytes("speaker-%s".formatted(speakerIdStr).getBytes());
-            Speaker speaker = Speaker.findById(speakerId);
-            boolean isNew = (speaker == null);
-
-            if (isNew) {
-                speaker = new Speaker();
-                speaker.id = speakerId;
-            }
-
-            speaker.firstName = emptyToNull(fields[COL_FIRST_NAME]);
-            speaker.lastName = emptyToNull(fields[COL_LAST_NAME]);
-            speaker.title = emptyToNull(fields[COL_TAG_LINE]);
-            speaker.biography = emptyToNull(fields[COL_BIO]);
-            speaker.company = emptyToNull(fields[COL_COMPANY]);
-            speaker.companyURL = emptyToNull(fields[COL_COMPANY_URL]);
-            speaker.twitterAccount = emptyToNull(fields[COL_TWITTER]);
-            speaker.linkedInAccount = emptyToNull(fields[COL_LINKEDIN]);
-            speaker.githubAccount = emptyToNull(fields[COL_GITHUB]);
-            speaker.blogURL = emptyToNull(fields[COL_BLOG_URL]);
-            speaker.star = false;
-
-            if (isNew) {
-                speaker.persist();
-            }
-
-            // Download profile picture if URL is provided
-            String profilePictureUrl = emptyToNull(fields[COL_PROFILE_PICTURE]);
-            if (profilePictureUrl != null) {
-                downloadProfilePicture(speakerId, profilePictureUrl);
-            }
-
-            LOG.debugf("%s speaker: %s %s (%s)", isNew ? "Persisted" : "Updated",
-                    speaker.firstName, speaker.lastName, speakerId);
-            return speaker;
-        } catch (Exception e) {
-            LOG.errorf(e, "Error creating speaker: %s", e.getMessage());
-            return null;
-        }
-    }
-
-    private Talk createOrUpdateTalk(String[] fields) {
-        String sessionIdStr = fields[COL_SESSION_ID].trim();
-
-        if (sessionIdStr.isEmpty()) {
-            return null;
-        }
-
-        try {
-            Long sessionId = Long.parseLong(sessionIdStr);
-            Talk talk = Talk.findById(sessionId);
-            boolean isNew = (talk == null);
-
-            if (isNew) {
-                // For new talks, title is required
-                String title = fields[COL_TITLE].trim();
-                if (title.isEmpty()) {
-                    LOG.warnf("Skipping new talk with session ID %d: title is empty", sessionId);
-                    return null;
-                }
-
-                talk = new Talk();
-                talk.id = sessionId;
-                talk.title = title;
-                talk.description = emptyToNull(fields[COL_DESCRIPTION]);
-                talk.scheduledDuration = emptyToNull(fields[COL_SCHEDULED_DURATION]);
-                talk.liveLink = emptyToNull(fields[COL_LIVE_LINK]);
-                String scheduledAt = fields[COL_SCHEDULED_AT].trim();
-                if (!scheduledAt.isEmpty()) {
-                    try {
-                        // Parse ISO format date-time from Excel
-                        LocalDateTime estDateTime = LocalDateTime.parse(scheduledAt);
-                        ZonedDateTime estZoned = estDateTime.atZone(EST_ZONE);
-                        ZonedDateTime cetZoned = estZoned.withZoneSameInstant(CET_ZONE);
-                        talk.date = cetZoned.format(DATE_FORMAT);
-                        talk.estTime = estZoned.format(TIME_FORMAT);
-                        talk.cetTime = cetZoned.format(TIME_FORMAT);
-                    } catch (Exception e) {
-                        LOG.warnf("Could not parse date '%s' for talk %d", scheduledAt, sessionId);
-                    }
-                }
-
-                talk.persist();
-                LOG.debugf("Persisted talk: %s (%d)", talk.title, sessionId);
-            } else {
-                // For existing talks, just return the found talk
-                LOG.debugf("Found existing talk: %s (%d) with %d speaker(s)", talk.title, sessionId,
-                        talk.speakers.size());
-            }
-
-            return talk;
-        } catch (Exception e) {
-            LOG.errorf(e, "Error creating talk: %s", e.getMessage());
-            return null;
-        }
-    }
-
-    private String emptyToNull(String value) {
-        String trimmed = value.trim();
-        return trimmed.isEmpty() ? null : trimmed;
-    }
-
-    private void downloadProfilePicture(UUID speakerId, String profilePictureUrl) {
-        if (profilePictureUrl == null || profilePictureUrl.isEmpty()) {
-            return;
-        }
-
-        try {
-            // Determine file extension from URL
-            String extension = "jpg"; // default
-            int lastDot = profilePictureUrl.lastIndexOf('.');
-            if (lastDot > 0) {
-                String urlExt = profilePictureUrl.substring(lastDot + 1).toLowerCase();
-                // Remove query parameters if any
-                int queryIndex = urlExt.indexOf('?');
-                if (queryIndex > 0) {
-                    urlExt = urlExt.substring(0, queryIndex);
-                }
-                if (urlExt.equals("jpg") || urlExt.equals("jpeg") || urlExt.equals("png") || urlExt.equals("gif")) {
-                    extension = urlExt;
-                }
-            }
-
-            // Target path: src/main/resources/META-INF/speaker/{Speaker Id}.{ext}
-            Path resourcesPath = Paths.get("src/main/resources/META-INF/speaker");
-            Files.createDirectories(resourcesPath);
-
-            Path imagePath = resourcesPath.resolve(speakerId.toString() + "." + extension);
-
-            // Check if file already exists
-            if (Files.exists(imagePath)) {
-                LOG.debugf("Profile picture already exists for speaker %s, skipping download", speakerId);
-                return;
-            }
-
-            // Download image
-            LOG.infof("Downloading profile picture for speaker %s from %s", speakerId, profilePictureUrl);
-            URI uri = URI.create(profilePictureUrl);
-
-            try (InputStream in = uri.toURL().openStream()) {
-                Files.copy(in, imagePath);
-                LOG.infof("Downloaded profile picture for speaker %s to %s", speakerId, imagePath);
-            }
-
-        } catch (Exception e) {
-            LOG.errorf(e, "Error downloading profile picture for speaker %s from %s", speakerId, profilePictureUrl);
-        }
-    }
+  }
 }
