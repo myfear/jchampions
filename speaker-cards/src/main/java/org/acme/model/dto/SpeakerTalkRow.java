@@ -58,4 +58,79 @@ public class SpeakerTalkRow
     return "SpeakerTalkRow{speakerId=%s, firstName=%s, lastName=%s"
       .formatted(speakerId, firstName, lastName);
   }
+
+  public String getSessionId()
+  {
+    return sessionId;
+  }
+
+  public String getTitle()
+  {
+    return title;
+  }
+
+  public String getDescription()
+  {
+    return description;
+  }
+
+  public String getCompanyUrl()
+  {
+    return companyUrl;
+  }
+
+  public String getUnused5()
+  {
+    return unused5;
+  }
+
+  public String getUnused6()
+  {
+    return unused6;
+  }
+
+  public String getUnused7()
+  {
+    return unused7;
+  }
+
+  public String getUnused8()
+  {
+    return unused8;
+  }
+
+  public String getScheduledAt()
+  {
+    return scheduledAt;
+  }
+
+  public String getScheduledDuration()
+  {
+    return scheduledDuration;
+  }
+
+  public String getLiveLink()
+  {
+    return liveLink;
+  }
+
+  public String getUnused12()
+  {
+    return unused12;
+  }
+
+  public String getSpeakerId()
+  {
+    return speakerId;
+  }
+
+  public String getFirstName()
+  {
+    return firstName;
+  }
+
+  public String getProfilePictureUrl()
+  {
+    return profilePictureUrl;
+  }
 }
