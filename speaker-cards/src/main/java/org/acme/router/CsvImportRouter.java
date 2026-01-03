@@ -15,7 +15,7 @@ import org.jboss.logging.*;
 import java.util.*;
 
 @ApplicationScoped
-public class CsvImportRouter  extends RouteBuilder
+public class CsvImportRouter extends RouteBuilder
 {
   private static final Logger LOG = Logger.getLogger(CsvImportRouter.class);
 
@@ -24,7 +24,7 @@ public class CsvImportRouter  extends RouteBuilder
   @Inject
   TalkProcessor talkProcessor;
   @Inject
-  TransactionalProcessor transactionalProcessor;
+  BannerProcessor bannerProcessor;
 
   @Override
   public void configure() throws Exception
@@ -39,14 +39,14 @@ public class CsvImportRouter  extends RouteBuilder
         .stop()
       .end()
       .log(">>> Starting CSV import from ${header.CamelFileName}")
-      .process(transactionalProcessor)
       .unmarshal(bindy)
       .split(body())
         .to("direct:process-speaker")
         .to("direct:process-talk")
         .to("direct:download-photo")
       .end()
-      .log(">>> CSV import completed");
+      .log(">>> CSV import completed")
+      .to("direct:generate-banners");
 
     from("direct:process-speaker")
       .process(speakerProcessor);
@@ -58,7 +58,8 @@ public class CsvImportRouter  extends RouteBuilder
       .filter(simple("${body.profilePictureUrl} != null"))
       .setHeader("speakerId", simple("${body.speakerId}"))
       .setHeader("photoUrl", simple("${body.profilePictureUrl}"))
-      .process(exchange -> {
+      .process(exchange ->
+      {
         String url = exchange.getIn().getHeader("photoUrl", String.class);
         String extension = url.substring(url.lastIndexOf('.') + 1).toLowerCase();
         if (extension.contains("?")) extension = extension.substring(0, extension.indexOf("?"));
@@ -72,5 +73,9 @@ public class CsvImportRouter  extends RouteBuilder
       .toD("${header.photoUrl}?httpMethod=GET")
       .toD("file:src/main/resources/META-INF/speaker?fileName=${header.fileName}&fileExist=Ignore")
       .log(">>> Downloaded photo for speaker ${header.speakerId}");
+
+    from("direct:generate-banners")
+      .process(bannerProcessor)
+      .log(">>> Banner generation pipeline completed");
   }
 }
