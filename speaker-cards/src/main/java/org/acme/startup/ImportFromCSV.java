@@ -10,6 +10,7 @@ import org.acme.model.dto.*;
 import org.apache.camel.*;
 import org.apache.camel.dataformat.bindy.csv.*;
 import org.apache.camel.support.*;
+import org.eclipse.microprofile.config.inject.*;
 import org.jboss.logging.*;
 
 import java.io.*;
@@ -22,8 +23,10 @@ import java.util.*;
 @ApplicationScoped
 public class ImportFromCSV
 {
-  @Inject
-  ProducerTemplate producerTemplate;
+  @ConfigProperty(name = "csv.input.directory")
+  String csvInputDirectory;
+  @ConfigProperty(name = "csv.source.file")
+  String csvInputFile;
 
   public void importFromCSV(String csvFilePath)
   {
@@ -32,7 +35,7 @@ public class ImportFromCSV
       throw new IllegalArgumentException("### CSV file not found: " + csvFilePath);
     try
     {
-      Path targetDir = Paths.get("./csv-input");
+      Path targetDir = Paths.get(csvInputDirectory);
       Files.createDirectories(targetDir);
       Path targetPath = targetDir.resolve("SelectedWithSchedule.csv");
       Files.copy(path, targetPath, StandardCopyOption.REPLACE_EXISTING);

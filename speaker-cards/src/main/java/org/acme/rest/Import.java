@@ -1,6 +1,7 @@
 package org.acme.rest;
 
 import org.acme.startup.ImportFromCSV;
+import org.eclipse.microprofile.config.inject.*;
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.renarde.Controller;
@@ -19,6 +20,9 @@ public class Import extends Controller
 
   @Inject
   ImportFromCSV importFromCSV;
+  @ConfigProperty(name = "csv.source.file")
+  String csvSourceFile;
+
 
   @GET
   @Path("/csv")
@@ -28,12 +32,14 @@ public class Import extends Controller
   {
     try
     {
-      importFromCSV.importFromCSV("SelectedWithSchedule.csv");
-      return Response.ok(">>> CSV import completed successfully. Check logs for details.").build();
+      importFromCSV.importFromCSV(csvSourceFile);
+      return Response.ok(">>> CSV import completed successfully from %s. Check logs for details."
+        .formatted(csvSourceFile)).build();
     }
     catch (Exception e)
     {
-      LOG.errorf(e, "### Error during CSV import");
+      LOG.errorf(e, "### Error during CSV import from %s"
+        .formatted(csvSourceFile));
       return Response.serverError()
         .entity("### Error during CSV import: " + e.getMessage())
         .build();
@@ -49,7 +55,8 @@ public class Import extends Controller
     try
     {
       importFromCSV.importFromCSV(path);
-      return Response.ok("CSV import completed successfully. Check logs for details.").build();
+      return Response.ok("CSV import completed successfully from %s. Check logs for details."
+        .formatted(path)).build();
     }
     catch (Exception e)
     {

@@ -46,6 +46,7 @@ public class CsvImportRouter extends RouteBuilder
         .to("direct:download-photo")
       .end()
       .log(">>> CSV import completed")
+      .setHeader("outputDir", constant("./speaker-banners"))
       .to("direct:generate-banners");
 
     from("direct:process-speaker")
@@ -71,7 +72,7 @@ public class CsvImportRouter extends RouteBuilder
         exchange.getIn().setBody(null);
       })
       .toD("${header.photoUrl}?httpMethod=GET")
-      .toD("file:src/main/resources/META-INF/speaker?fileName=${header.fileName}&fileExist=Ignore")
+      .toD("file:./speaker-photos?fileName=${header.fileName}&fileExist=Ignore")
       .log(">>> Downloaded photo for speaker ${header.speakerId}");
 
     from("direct:generate-banners")

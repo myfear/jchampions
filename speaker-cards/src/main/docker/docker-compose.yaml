@@ -1,0 +1,51 @@
+version: '3.8'
+services:
+  database:
+    image: postgres:latest
+    hostname: postgresql
+    container_name: postgresql
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: speakercards
+      POSTGRES_USER: ${DATABASE_USER:-postgres}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: postgres -c "max_prepared_transactions=100"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+  adminer:
+    image: adminer
+    depends_on:
+      database:
+        condition: service_healthy
+    hostname: adminer
+    container_name: adminer
+    ports:
+      - "8085:8080"
+  jchamps:
+    image: markuseisele/jchamps:1.0.0-SNAPSHOT
+    depends_on:
+      database:
+        condition: service_healthy
+    hostname: jchamps
+    container_name: jchamps
+    ports:
+      - "8080:8080"
+      - "5005:5005"
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/speakercards
+      DATABASE_USER: ${DATABASE_USER:-postgres}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+    volumes:
+      - ./app-data/speaker-photos:/home/jboss/speaker-photos
+      - ./app-data/csv-input:/home/jboss/csv-input
+      - ./app-data/speaker-banners:/home/jboss/speaker-banners
+      - ./SelectedWithSchedule.csv:/home/jboss/SelectedWithSchedule.csv:ro
+volumes:
+  postgres_data:
+  speaker_photos:
