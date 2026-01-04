@@ -1,6 +1,7 @@
 package org.acme.rest;
 
 import java.io.InputStream;
+import java.nio.file.*;
 import java.util.List;
 import java.util.UUID;
 
@@ -120,45 +121,31 @@ public class Banner extends Controller {
 
         // Try to find speaker image in resources/META-INF/speaker/{id}.{ext}
         String[] extensions = { ".jpg", ".png", ".jpeg" };
-        String resourcePath = null;
+        java.nio.file.Path imagePath = null;
         String mimeType = null;
 
         for (String ext : extensions) {
-            String testPath = "/META-INF/speaker/" + id + ext;
-            InputStream testStream = getClass().getResourceAsStream(testPath);
-            if (testStream != null) {
-                try {
-                    testStream.close();
-                } catch (Exception e) {
-                    // Ignore
-                }
-                resourcePath = testPath;
-                // Determine MIME type based on extension
-                if (ext.equals(".png")) {
-                    mimeType = "image/png";
-                } else {
-                    mimeType = "image/jpeg";
-                }
+            java.nio.file.Path testPath = Paths.get("./speaker-photos/" + id + ext);
+            if (Files.exists(testPath))
+            {
+                imagePath = testPath;
+                mimeType = ext.equals(".png") ? "image/png" : "image/jpeg";
                 break;
             }
         }
-
         // If no image found, fall back to duke_cool.png
-        if (resourcePath == null) {
+        if (imagePath == null) {
             seeOther("/static/images/duke_cool.png");
-            return null; // seeOther will redirect
+            return null;
         }
 
         // Read the image file
-        try (InputStream imageStream = getClass().getResourceAsStream(resourcePath)) {
-            if (imageStream == null) {
-                seeOther("/static/images/duke_cool.png");
-                return null;
-            }
-            byte[] bytes = imageStream.readAllBytes();
+        try {
+            byte[] bytes = Files.readAllBytes(imagePath);
             return Response.ok(bytes, mimeType).build();
         } catch (Exception e) {
-            throw new RuntimeException("Error reading speaker image", e);
+            seeOther("/static/images/duke_cool.png");
+            return null;
         }
     }
 

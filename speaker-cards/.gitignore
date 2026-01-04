@@ -13,10 +13,16 @@ node_modules/
 src/main/resources/META-INF/speaker/
 banners/
 speaker-banners
+jchampions-banners/
 
-SelectedWithSchedule.xlsx
+csv-input/.done
+csv-input/.error
 
 *.sql_
+
+.done/
+.error/
+
 
 # Eclipse
 .project
