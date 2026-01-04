@@ -15,7 +15,14 @@ banners/
 speaker-banners
 jchampions-banners/
 
+csv-input/.done
+csv-input/.error
+
 *.sql_
+
+.done/
+.error/
+
 
 # Eclipse
 .project

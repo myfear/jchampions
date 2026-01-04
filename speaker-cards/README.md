@@ -4,22 +4,34 @@ This project uses Quarkus, the Supersonic Subatomic Java Framework.
 
 If you want to learn more about Quarkus, please visit its website: <https://quarkus.io/>.
 
+## Automated CSV Import and Banner Generation
 
+The application now features a fully automated pipeline that handles CSV import, speaker photo downloads, and banner
+generation in a single operation:
 
-Import speakers from sessionize export:
-curl "http://localhost:8080/api/import/csv/SelectedWithSchedule.xlsx"
+    curl http://localhost:8080/api/import/csv
 
-Generate Speaker Banners:
-curl "http://localhost:8080/api/banners/generate-all?outputDir=./speaker-banners"
+This single command will:
 
+  - Import speakers and talks from CSV data.
+  - Download speaker profile photos.
+  - Generate all banner types (speaker, talk, and social banners).
+  - Save banners to `./speaker-banners/` directory.
+
+The pipeline is built using Apache Camel routes and processes data through the following stages:
+
+  - CSV Processing: parses speaker and talk data using Camel Bindy.
+  - Database Import: persists entities using Hibernate ORM Panache.
+  - Photo Download: downloads speaker photos via HTTP.
+  - Banner Generation: creates PNG banners using Quarkus PDF/image generation
 
 ## Running the application in dev mode
 
 You can run your application in dev mode that enables live coding using:
 
-```shell script
-./mvnw quarkus:dev
-```
+    $ mvn clean quarkus:dev
+    $ curl http://localhost:8080/api/import/csv
+    $ open http://localhost:8080
 
 > **_NOTE:_**  Quarkus now ships with a Dev UI, which is available in dev mode only at <http://localhost:8080/q/dev/>.
 
@@ -30,27 +42,91 @@ You can run your application in dev mode that enables live coding using:
   - Database configuration uses Quarkus Dev Services (requires Docker).
   - File paths are hardcoded for development environment.
 
+## Production Deployment
+The application is production-ready with Docker Compose support:
+
+    # Build the application and start all services (PostgreSQL + Application)
+    $ mvn clean install
+    $ curl http://localhost:8080/api/import/csv
+    $ open http://localhost:8080
+
+### Production Features
+
+  - PostgreSQL Database: containerized database with persistent storage.
+  - File Storage: external volume mounts for photos and banners.
+  - Automated Pipeline: same CSV import endpoint works in production.
+  - Health Checks: database health monitoring and service dependencies.
+
+### Docker Services
+
+  - Application: http://localhost:8080
+  - Database Admin: http://localhost:8085 (Adminer)
+  - PostgreSQL: localhost:5432
+
+### Infrastructure
+
+The software infrastructure is as shown below.
+
+#### Technology Stack
+
+  - Quarkus: Supersonic Subatomic Java Framework.
+  - Apache Camel: Integration framework for CSV processing pipeline.
+  - Hibernate ORM Panache: Database persistence layer.
+  - PostgreSQL: Production database
+  - Renarde: Server-side web framework with PDF/image generation
+  - Docker: Containerization and orchestration
+
+#### Key Components
+
+  - `CsvImportRouter`: Camel route orchestrating the import pipeline.
+  - Processors: Transactional processors for speakers, talks, photos, and banners.
+  - Entities: Speaker and Talk JPA entities with Panache.
+  - Banner Generation: PDF-to-PNG conversion for various banner types.
+
+#### API Endpoints
+
+
+The following are the API endpoints:
+
+  - GET /api/import/csv - triggers automated import pipeline.
+  - GET /speaker-banner/{id}.png - generates a speaker banner.
+  - GET /talk-banner/{id}.png - generate a talk banner.
+  - GET /speaker-social/{id}.png - generate social media banner.
+  - GET /speaker-photo/{id} - serves a speaker photos
+
+#### File Structure
+
+    ./csv-input/          # CSV processing directory
+    ./speaker-photos/     # Downloaded speaker photos
+    ./speaker-banners/    # Generated banner files
+      ├── speaker/        # Speaker banners
+      ├── talks/          # Talk banners
+      └── social/         # Social media banners
+
+## Development vs Production
+
+The application automatically adapts file paths based on the environment:
+
+  - Development: uses relative paths in project directory.
+  - Production: uses absolute paths with Docker volume mounts.
+
 ## Packaging and running the application
 
-The application can be packaged using:
+The application can be run in Quarkeus dev mode using:
 
-```shell script
-./mvnw package
-```
+    mvnw quarkus:dev
 
-It produces the `quarkus-run.jar` file in the `target/quarkus-app/` directory.
-Be aware that it’s not an _über-jar_ as the dependencies are copied into the `target/quarkus-app/lib/` directory.
+or in production-ready mode using:
 
-The application is now runnable using `java -jar target/quarkus-app/quarkus-run.jar` but, of course, it will require a 
-PostgreSQL server to run locally, otherwise it will fail.
+    mvn clean install
 
-If you want to build an _über-jar_, execute the following command:
+In the later case, all the required Docker images will be started, as shown below:
 
-```shell script
-./mvnw package -Dquarkus.package.jar.type=uber-jar
-```
-
-The application, packaged as an _über-jar_, is now runnable using `java -jar target/*-runner.jar`.
+    $ docker ps
+    CONTAINER ID   IMAGE                                 COMMAND                  CREATED          STATUS                    PORTS                                                                                                NAMES
+    794da1574773   markuseisele/jchamps:1.0.0-SNAPSHOT   "java -agentlib:jdwp…"   15 seconds ago   Up 4 seconds              0.0.0.0:5005->5005/tcp, [::]:5005->5005/tcp, 0.0.0.0:8080->8080/tcp, [::]:8080->8080/tcp, 8443/tcp   jchamps
+    a594f67f20af   adminer                               "entrypoint.sh docke…"   15 seconds ago   Up 4 seconds              0.0.0.0:8085->8080/tcp, [::]:8085->8080/tcp                                                          adminer
+    cafcd440ba5c   postgres:latest                       "docker-entrypoint.s…"   15 seconds ago   Up 14 seconds (healthy)   0.0.0.0:5432->5432/tcp, [::]:5432->5432/tcp                                                          postgresql
 
 ## Creating a native executable
 
@@ -78,58 +154,6 @@ If you want to learn more about building native executables, please consult <htt
 
 ### Renarde
 
-This is a small Renarde webapp. Once the quarkus app is started visit http://localhost:8080/renarde
+This is a small Renarde webapp. Once the quarkus app is started visit http://localhost:8080
 
 [Related guide section...](https://quarkiverse.github.io/quarkiverse-docs/quarkus-renarde/dev/index.html)
-
-# TODO - Production Support
-
-The following items need to be implemented for production deployment.
-
-## Database Configuration
-
-  - Add production PostgreSQL configuration with environment variables.
-  - Create Docker Compose setup with PostgreSQL container.
-  - Add database migration scripts.
-
-## File Storage
-
-  - Move speaker photo storage from resources to external directory (e.g., `/app/speaker-photos/`)
-  - Add volume mapping for persistent photo storage in Docker.
-  - Update Banner controller to serve photos from filesystem instead of resources.
-
-## Docker Support
-
-  - Add docker-compose.yml with PostgreSQL and application services
-  - Configure production datasource for containerized PostgreSQL
-
-## Example of Production Setup
-
-    # docker-compose.yml (TODO)
-    version: '3.8'
-    services:
-      postgres:
-        image: postgres:15
-        environment:
-          POSTGRES_DB: speakercards
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-      volumes:
-        - postgres_data:/var/lib/postgresql/data
-
-      app:
-        build: .
-        ports:
-          - "8080:8080"
-        environment:
-          DATABASE_URL: jdbc:postgresql://postgres:5432/speakercards
-          DATABASE_USER: postgres
-          DATABASE_PASSWORD: postgres
-        volumes:
-          - speaker_photos:/app/speaker-photos
-        depends_on:
-          - postgres
-
-    volumes:
-      postgres_data:
-      speaker_photos:

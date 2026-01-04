@@ -1,33 +1,28 @@
 package org.acme.router;
 
-import io.quarkus.runtime.*;
 import jakarta.enterprise.context.*;
-import jakarta.enterprise.event.*;
 import jakarta.inject.*;
 import org.acme.model.dto.*;
 import org.acme.processor.*;
-import org.acme.startup.*;
 import org.apache.camel.*;
 import org.apache.camel.builder.*;
 import org.apache.camel.dataformat.bindy.csv.*;
-import org.jboss.logging.*;
-
-import java.util.*;
 
 @ApplicationScoped
 public class CsvImportRouter extends RouteBuilder
 {
-  private static final Logger LOG = Logger.getLogger(CsvImportRouter.class);
-
   @Inject
   SpeakerProcessor speakerProcessor;
   @Inject
   TalkProcessor talkProcessor;
   @Inject
   BannerProcessor bannerProcessor;
+  @Inject
+  PhotoProcessor photoProcessor;
+
 
   @Override
-  public void configure() throws Exception
+  public void configure()
   {
     BindyCsvDataFormat bindy = new BindyCsvDataFormat(SpeakerTalkRow.class);
 
@@ -59,19 +54,7 @@ public class CsvImportRouter extends RouteBuilder
       .filter(simple("${body.profilePictureUrl} != null"))
       .setHeader("speakerId", simple("${body.speakerId}"))
       .setHeader("photoUrl", simple("${body.profilePictureUrl}"))
-      .process(exchange ->
-      {
-        String url = exchange.getIn().getHeader("photoUrl", String.class);
-        String extension = url.substring(url.lastIndexOf('.') + 1).toLowerCase();
-        if (extension.contains("?")) extension = extension.substring(0, extension.indexOf("?"));
-        if (!List.of("jpg", "jpeg", "png", "gif").contains(extension)) extension = "jpg";
-
-        UUID speakerId = UUID.nameUUIDFromBytes(("speaker-" + exchange.getIn().getHeader("speakerId")).getBytes());
-        String fileName = speakerId + "." + extension;
-        exchange.getIn().setHeader("fileName", fileName);
-        exchange.getIn().setBody(null);
-      })
-      .toD("${header.photoUrl}?httpMethod=GET")
+      .process(photoProcessor)      .toD("${header.photoUrl}?httpMethod=GET")
       .toD("file:./speaker-photos?fileName=${header.fileName}&fileExist=Ignore")
       .log(">>> Downloaded photo for speaker ${header.speakerId}");
 
