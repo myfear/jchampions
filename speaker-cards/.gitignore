@@ -12,9 +12,12 @@ node_modules/
 
 src/main/resources/META-INF/speaker/
 banners/
-speaker-banners
+speaker-banners*
 
 SelectedWithSchedule.xlsx
+AcceptedV2.xlsx
+AcceptedV3.xlsx
+AcceptedV5.xlsx
 
 *.sql_
 
