@@ -1,76 +1,44 @@
-# speaker-cards
+# jChampions speaker cards
 
-This project uses Quarkus, the Supersonic Subatomic Java Framework.
+A Java application that generates speaker cards, talk banners, and social images for the jChampions Conference. It automates the repetitive work of updating names, photos, session details, and schedules across conference graphics.
 
-If you want to learn more about Quarkus, please visit its website: <https://quarkus.io/>.
+## What it does
 
+- Imports speakers and talks from a Sessionize Excel schedule export and downloads speaker photos.
+- Stores speaker and session data in PostgreSQL.
+- Renders HTML templates as PNG images, individually or in a batch.
+- Provides a local speaker directory with links to the generated cards.
 
+Built with Quarkus, Renarde, Qute templates, Hibernate ORM with Panache, and Apache POI.
 
-Import speakers from sessionize export:
-curl "http://localhost:8080/api/import/csv/SelectedWithSchedule.xlsx"
+## Background
 
-Generate Speaker Banners:
-curl "http://localhost:8080/api/banners/generate-all?outputDir=./speaker-banners"
+The motivation and implementation are described in [Automating Conference Assets with Java: The Quarkus System Behind jChampions 2026](https://www.the-main-thread.com/p/quarkus-jchampions-speaker-card-generator-tutorial) on The Main Thread.
 
+## Run locally
 
-## Running the application in dev mode
+Use IBM Semeru Java 27 and a running Docker or Podman environment for the development PostgreSQL database. Select the project's SDKMAN Java version and start the application:
 
-You can run your application in dev mode that enables live coding using:
-
-```shell script
+```sh
+sdk env
 ./mvnw quarkus:dev
 ```
 
-> **_NOTE:_**  Quarkus now ships with a Dev UI, which is available in dev mode only at <http://localhost:8080/q/dev/>.
+Place `SelectedWithSchedule.xlsx` in the project root, then import it and generate all cards:
 
-## Packaging and running the application
-
-The application can be packaged using:
-
-```shell script
-./mvnw package
+```sh
+curl "http://localhost:8080/api/import/csv/SelectedWithSchedule.xlsx"
+curl "http://localhost:8080/api/banners/generate-all?outputDir=./speaker-banners"
 ```
 
-It produces the `quarkus-run.jar` file in the `target/quarkus-app/` directory.
-Be aware that it’s not an _über-jar_ as the dependencies are copied into the `target/quarkus-app/lib/` directory.
+Browse the [local speaker directory](http://localhost:8080/). Generated PNGs are saved under `speaker-banners/` in the `speaker/`, `talks/`, and `social/` folders. The current configuration recreates the database schema on startup.
 
-The application is now runnable using `java -jar target/quarkus-app/quarkus-run.jar`.
+Run `./mvnw verify` to build the application and test Excel import, PostgreSQL persistence, and PNG rendering. Docker or Podman must be running for the test database.
 
-If you want to build an _über-jar_, execute the following command:
+## Artwork
 
-```shell script
-./mvnw package -Dquarkus.package.jar.type=uber-jar
-```
+Card templates live in `src/main/resources/templates/Banner/`; images and fonts live in `src/main/resources/META-INF/resources/static/`.
 
-The application, packaged as an _über-jar_, is now runnable using `java -jar target/*-runner.jar`.
+The community sponsorship artwork uses a yearless **Community Supporter** design.
 
-## Creating a native executable
-
-You can create a native executable using:
-
-```shell script
-./mvnw package -Dnative
-```
-
-Or, if you don't have GraalVM installed, you can run the native executable build in a container using:
-
-```shell script
-./mvnw package -Dnative -Dquarkus.native.container-build=true
-```
-
-You can then execute your native executable with: `./target/speaker-cards-1.0.0-SNAPSHOT-runner`
-
-If you want to learn more about building native executables, please consult <https://quarkus.io/guides/maven-tooling>.
-
-## Related Guides
-
-- Renarde ([guide](https://quarkiverse.github.io/quarkiverse-docs/quarkus-renarde/dev/index.html)): Renarde is a server-side Web Framework based on Quarkus, Qute, Hibernate and RESTEasy Reactive.
-
-## Provided Code
-
-### Renarde
-
-This is a small Renarde webapp. Once the quarkus app is started visit http://localhost:8080/renarde
-
-[Related guide section...](https://quarkiverse.github.io/quarkiverse-docs/quarkus-renarde/dev/index.html)
-
+![jChampions Conference Community Supporter badge](docs/images/jchampions-supporter-dark.png)
