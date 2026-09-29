@@ -1,285 +1,42 @@
 <!DOCTYPE html PUBLIC "-//OPENHTMLTOPDF//DOC XHTML Character Entities Only 1.0//EN" "">
 <html lang="en">
-
 <head>
   <meta charset="UTF-8" />
-  <title>{speaker.firstName} {speaker.lastName} — Speaker Card</title>
+  <title>{speaker.firstName} {speaker.lastName} — jChampions {year}</title>
   <style>
-    @font-face {
-      font-family: 'Roboto Mono';
-      font-style: normal;
-      font-weight: 400;
-      src: url('/static/fonts/RobotoMonoRegular.ttf') format('truetype');
-    }
-
-    @font-face {
-      font-family: 'Roboto Mono';
-      font-style: normal;
-      font-weight: 300;
-      src: url('/static/fonts/RobotoMonoLight.ttf') format('truetype');
-    }
-
-    @font-face {
-      font-family: 'Roboto Mono';
-      font-style: normal;
-      font-weight: 700;
-      src: url('/static/fonts/RobotoMonoBold.ttf') format('truetype');
-    }
-
-    @page {
-      size: 1080px 1080px;
-      margin: 0px;
-      padding: 0px;
-    }
-
-    body {
-      margin: 0px;
-      padding: 0px;
-      width: 1080px;
-      height: 1080px;
-      position: relative;
-      overflow: hidden;
-      font-family: "Roboto Mono", monospace;
-      color: #ffffff;
-    }
-
-    body::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-image: url('/static/images/backgroundSocial.png');
-      background-size: cover;
-      background-position: center;
-      background-repeat: no-repeat;
-      transform: scaleX(-1);
-      z-index: 0;
-    }
-
-    /* "I am speaking about:" text */
-    .intro-text {
-      position: absolute;
-      top: 80px;
-      left: 60px;
-      font-size: 32px;
-      font-weight: 300;
-      color: #ffffff;
-      font-family: "Roboto Mono", monospace;
-      z-index: 10;
-    }
-
-    /* Talk title */
-    .talk-title {
-      position: absolute;
-      top: 140px;
-      left: 60px;
-      right: 60px;
-      font-size: 56px;
-      font-weight: 700;
-      color: #ffffff;
-      line-height: 1.3;
-      font-family: "Roboto Mono", monospace;
-      word-wrap: break-word;
-      z-index: 10;
-    }
-
-    /* Speaker section table */
-    .speaker-section {
-      position: absolute;
-      top: 380px;
-      left: 60px;
-      right: 60px;
-      z-index: 10;
-    }
-
-    .speaker-section table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-
-    .speaker-section td {
-      vertical-align: top;
-      padding: 0;
-    }
-
-    .speaker-section td[colspan="2"] {
-      text-align: right;
-    }
-
-    /* Speaker name */
-    .speaker-name {
-      font-size: 64px;
-      font-weight: 700;
-      color: #ffffff;
-      font-family: "Roboto Mono", monospace;
-      word-wrap: break-word;
-    }
-
-    /* Speaker photo */
-    .speaker-photo-wrapper {
-      width: 280px;
-      height: 280px;
-      border-radius: 50%;
-      z-index: 150;
-      padding: 12px;
-      background-image: url('/static/images/background.png');
-      background-size: cover;
-      background-position: center;
-      background-repeat: no-repeat;
-      margin-left: auto;
-    }
-
-    .speaker-photo-inner {
-      width: 100%;
-      height: 100%;
-      border-radius: 50%;
-      background-size: cover;
-      background-position: center;
-      overflow: hidden;
-    }
-
-    /* Speaker title */
-    .speaker-title {
-      font-size: 28px;
-      color: #ffb84d;
-      font-weight: 400;
-      font-family: "Roboto Mono", monospace;
-      margin-top: 20px;
-    }
-
-    /* Date and times - bottom */
-    .date-time {
-      position: absolute;
-      bottom: 260px;
-      left: 60px;
-      font-size: 32px;
-      color: #ffffff;
-      font-family: "Roboto Mono", monospace;
-      z-index: 10;
-      line-height: 1.5;
-    }
-
-    /* Top logo - positioned at bottom right */
-    #top-logo {
-      position: absolute;
-      bottom: 60px;
-      right: 30px;
-      z-index: 10;
-      height: 150px;
-      width: 150px;
-    }
-
-    #top-logo img {
-      width: auto;
-      height: 100px;
-      display: block;
-    }
-
-    /* Conference banner - orange rounded rectangle on bottom left */
-    .conference-banner {
-      position: absolute;
-      bottom: 110px;
-      left: 30px;
-      z-index: 10;
-      padding: 12px 24px;
-      border-radius: 12px;
-      background-color: #f38113;
-      font-weight: 400;
-      font-size: 54px;
-      color: #ffffff;
-      font-family: "Roboto Mono", monospace;
-      white-space: nowrap;
-    }
-
-    /* Conference URL - bottom bar with dark blue background */
-    .conference-url {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      width: 100%;
-      background-color: #1a237e;
-      color: #ffffff;
-      font-family: "Roboto Mono", monospace;
-      font-size: 24px;
-      padding: 15px 30px;
-      text-align: center;
-      z-index: 10;
-    }
+    {#include Banner/cardStyles.html /}
+    @page { size: 1080px 1080px; margin: 0; }
+    .intro { position: absolute; left: 56px; top: 196px; width: 968px; font-size: 22px; }
+    .headline { position: absolute; left: 56px; top: 252px; width: 968px; }
+    .portrait-ring { left: 56px; top: 555px; width: 260px; height: 260px; }
+    .portrait { left: 87px; top: 586px; width: 198px; height: 198px; }
+    .speaker-info { position: absolute; left: 360px; top: 576px; width: 645px; }
+    .name { margin-bottom: 18px; }
+    .role { font-size: 26px; max-width: 610px; }
+    .footer { top: 875px; right: 310px; }
+    .session-date { font-size: 28px; }
+    .session-time { font-size: 23px; }
+    .website { left: 0; right: auto; top: 128px; font-size: 25px; white-space: nowrap; }
+    .duke { right: 4px; top: 793px; width: 262px; height: 314px; }
   </style>
 </head>
-
-<body>
-  <!-- "I am speaking about:" text -->
-  <div class="intro-text">I am speaking about:</div>
-
-  <!-- Talk title -->
+<body class="square">
+  <img class="brand" src="/static/images/2027/logo-dark.png" alt="jChampions Conference" />
+  <div class="year">{year}</div>
+  <div class="header-rule"></div>
+  <div class="eyebrow intro">I'm speaking at jChampions</div>
   {#if talk != null && talk.title}
-  <div class="talk-title">{talk.title}</div>
+    <h1 class="headline" style="font-size: {card:fontSize(talk.title, 62, 34, 968, 4)}px">{talk.title}</h1>
+  {#else}
+    <h1 class="headline" style="font-size: 62px">See you at<br />jChampions {year}.</h1>
   {/if}
-
-
-  <!-- Speaker name and photo with table -->
-  <div class="speaker-section">
-    <table>
-      <tr>
-        <td>
-          <div class="speaker-name">{speaker.firstName} {speaker.lastName}</div>
-        </td>
-
-          <td rowspan="2">
-            <div class="speaker-photo-wrapper">
-              <div class="speaker-photo-inner" {#if speaker.id}
-                style="background-image: url('{uri:Banner.speakerPhoto(speaker.id)}')" {#else}
-                style="background-color: #ff9800;" {/if}></div>
-            </div>
-          </td>
-        </tr>
-        <tr>
-        <td>
-          {#if speaker.title}
-          <div class="speaker-title">{speaker.title}</div>
-          {/if}
-          
-        </td>
-      </tr>
-
-    </table>
+  <div class="portrait" style="background-image: url('{uri:Banner.speakerPhoto(speaker.id)}')"></div>
+  <img class="portrait-ring" src="/static/images/2027/portrait-ring-dark.png" alt="" />
+  <div class="speaker-info">
+    <h2 class="name" style="font-size: {card:fontSize(speaker.toString(), 52, 30, 645, 2)}px">{speaker.firstName} {speaker.lastName}</h2>
+    {#if speaker.title}<p class="role" style="font-size: {card:fontSize(speaker.title, 26, 18, 610, 3)}px">{speaker.title}</p>{/if}
   </div>
-
-
-
-  <!-- Date and times -->
-  {#if talk != null}
-  <div class="date-time">
-    {#if talk.date}
-    {str:formatDate(talk.date)}
-    {#if talk.estTime && talk.cetTime}
-    <br />
-    {/if}
-    {/if}
-    {#if talk.estTime && talk.cetTime}
-    {str:formatTime(talk.cetTime)}-{str:addHour(talk.cetTime)} CET |
-    {str:formatTime(talk.estTime)}-{str:addHour(talk.estTime)} EST
-    {/if}
-  </div>
-  {/if}
-
-  <!-- Conference banner -->
-  <div class="conference-banner">
-    jChampions Conference
-  </div>
-
-  <div id="top-logo">
-    <img src="/static/images/duke_champ.png" alt="Java Champions Duke" />
-  </div>
-
-  <div class="conference-url">
-    https://jchampionsconf.com/
-  </div>
-
+  <img class="duke" src="/static/images/2027/duke-wave.png" alt="Waving Duke" />
+  {#include Banner/cardFooter.html /}
 </body>
-
 </html>

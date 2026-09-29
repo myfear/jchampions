@@ -35,10 +35,18 @@ Browse the [local speaker directory](http://localhost:8080/). Generated PNGs are
 
 Run `./mvnw verify` to build the application and test Excel import, PostgreSQL persistence, and PNG rendering. Docker or Podman must be running for the test database.
 
-## Artwork
+## 2027 artwork
 
-Card templates live in `src/main/resources/templates/Banner/`; images and fonts live in `src/main/resources/META-INF/resources/static/`.
+The 2027 cards follow the new community supporter artwork: Poppins, teal and white backgrounds, orange/red segmented rings, and the waving Duke. Speaker and talk cards are 1280 × 720; social cards are 1080 × 1080.
 
-The community sponsorship artwork uses a yearless **Community Supporter** design.
+![2027 speaker, talk, and social card previews](docs/images/2027/preview.png)
+
+These previews use existing speaker photography with an illustrative talk and date. Actual session dates and times come from the imported schedule. Set the edition label with `conference.year` in `src/main/resources/application.properties`.
+
+Card templates live in `src/main/resources/templates/Banner/`, including shared styles and a shared schedule footer. The original supporter SVGs are in `docs/artwork/2027/`. Derived SVG/PNG assets are in `src/main/resources/META-INF/resources/static/images/2027/`; bundled Poppins fonts and their license are in `static/fonts/` alongside them.
+
+`python3 scripts/prepare-2027-artwork.py` regenerates the derived SVGs from the originals. After changing the artwork, export each derived SVG to its adjacent PNG at its declared dimensions; the PNG renderer uses those raster exports.
+
+### Art direction
 
 ![jChampions Conference Community Supporter badge](docs/images/jchampions-supporter-dark.png)

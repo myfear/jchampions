@@ -1,0 +1,7 @@
+<div class="footer">
+  {#if talk != null}
+    {#if talk.date}<div class="session-date">{str:formatDate(talk.date)}</div>{/if}
+    <div class="session-time">{#if talk.cetTime}{str:formatTime(talk.cetTime)} CET{/if}{#if talk.cetTime && talk.estTime} / {/if}{#if talk.estTime}{str:formatTime(talk.estTime)} EST{/if}</div>
+  {/if}
+  <div class="website">jchampionsconf.com</div>
+</div>

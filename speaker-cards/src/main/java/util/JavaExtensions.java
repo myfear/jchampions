@@ -63,63 +63,18 @@ public class JavaExtensions {
         return formatTime(time);
     }
 
-    /**
-     * Formats date string from "Thursday, 22-Jan" to "January, 22nd, 2025"
-     */
+    /** Formats an imported ISO date without assuming a conference year. */
     @TemplateExtension(namespace = "str")
     public static String formatDate(String date) {
-        if (date == null || date.isEmpty()) {
+        if (date == null || date.isBlank()) {
             return "";
         }
         try {
-            // Parse "Thursday, 22-Jan" format
-            String[] parts = date.split(", ");
-            if (parts.length == 2) {
-                String dayPart = parts[1]; // "22-Jan"
-                String[] dayMonth = dayPart.split("-");
-                if (dayMonth.length == 2) {
-                    String day = dayMonth[0];
-                    String monthAbbr = dayMonth[1];
-                    
-                    // Convert month abbreviation to full name
-                    String month = switch (monthAbbr) {
-                        case "Jan" -> "January";
-                        case "Feb" -> "February";
-                        case "Mar" -> "March";
-                        case "Apr" -> "April";
-                        case "May" -> "May";
-                        case "Jun" -> "June";
-                        case "Jul" -> "July";
-                        case "Aug" -> "August";
-                        case "Sep" -> "September";
-                        case "Oct" -> "October";
-                        case "Nov" -> "November";
-                        case "Dec" -> "December";
-                        default -> monthAbbr;
-                    };
-                    
-                    // Add ordinal suffix
-                    int dayNum = Integer.parseInt(day);
-                    String suffix = getOrdinalSuffix(dayNum);
-                    
-                    return month + ", " + day + suffix + ", 2025";
-                }
-            }
-        } catch (Exception e) {
-            // If parsing fails, return original
+            return java.time.LocalDate.parse(date.trim()).format(
+                    java.time.format.DateTimeFormatter.ofPattern("d MMMM uuuu", java.util.Locale.ENGLISH));
+        } catch (java.time.format.DateTimeParseException e) {
+            // Keep older human-readable schedule values without inventing a year.
+            return date;
         }
-        return date;
-    }
-
-    private static String getOrdinalSuffix(int day) {
-        if (day >= 11 && day <= 13) {
-            return "th";
-        }
-        return switch (day % 10) {
-            case 1 -> "st";
-            case 2 -> "nd";
-            case 3 -> "rd";
-            default -> "th";
-        };
     }
 }

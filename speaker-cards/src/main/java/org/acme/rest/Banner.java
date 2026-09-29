@@ -8,6 +8,7 @@ import org.acme.model.Speaker;
 import org.acme.model.Talk;
 import org.acme.service.BannerGenerationResult;
 import org.acme.service.BannerGenerationService;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.resteasy.reactive.RestPath;
 import org.jboss.resteasy.reactive.RestQuery;
 
@@ -27,16 +28,19 @@ import jakarta.ws.rs.core.Response;
 
 public class Banner extends Controller {
 
+    @ConfigProperty(name = "conference.year", defaultValue = "2027")
+    int year;
+
     @Inject
     BannerGenerationService bannerService;
 
     @CheckedTemplate
     public static class Templates {
-        public static native TemplateInstance speakerBanner(Speaker speaker, Talk talk);
+        public static native TemplateInstance speakerBanner(Speaker speaker, Talk talk, int year);
 
-        public static native TemplateInstance talkBanner(Talk talk);
+        public static native TemplateInstance talkBanner(Talk talk, int year);
 
-        public static native TemplateInstance speakerSocial(Speaker speaker, Talk talk);
+        public static native TemplateInstance speakerSocial(Speaker speaker, Talk talk, int year);
     }
 
     @Path("/speaker-banner")
@@ -49,7 +53,7 @@ public class Banner extends Controller {
         if (speaker.talks != null && !speaker.talks.isEmpty()) {
             talk = speaker.talks.get(0);
         }
-        return Templates.speakerBanner(speaker, talk);
+        return Templates.speakerBanner(speaker, talk, year);
     }
 
     @Produces(Pdf.IMAGE_PNG)
@@ -63,7 +67,7 @@ public class Banner extends Controller {
         if (speaker.talks != null && !speaker.talks.isEmpty()) {
             talk = speaker.talks.get(0);
         }
-        return Templates.speakerBanner(speaker, talk);
+        return Templates.speakerBanner(speaker, talk, year);
     }
 
     @Produces(Pdf.IMAGE_PNG)
@@ -77,7 +81,7 @@ public class Banner extends Controller {
         if (speaker.talks != null && !speaker.talks.isEmpty()) {
             talk = speaker.talks.get(0);
         }
-        return Templates.speakerSocial(speaker, talk);
+        return Templates.speakerSocial(speaker, talk, year);
     }
 
     @Path("/talk-banner")
@@ -92,7 +96,7 @@ public class Banner extends Controller {
                 speaker.id.toString(); // Access a field to ensure it's loaded
             }
         }
-        return Templates.talkBanner(talk);
+        return Templates.talkBanner(talk, year);
     }
 
     @Produces(Pdf.IMAGE_PNG)
@@ -108,7 +112,7 @@ public class Banner extends Controller {
                 speaker.id.toString(); // Access a field to ensure it's loaded
             }
         }
-        return Templates.talkBanner(talk);
+        return Templates.talkBanner(talk, year);
     }
 
     @GET
@@ -145,14 +149,14 @@ public class Banner extends Controller {
 
         // If no image found, fall back to duke_cool.png
         if (resourcePath == null) {
-            seeOther("/static/images/duke_cool.png");
+            seeOther("/static/images/2027/duke-wave.png");
             return null; // seeOther will redirect
         }
 
         // Read the image file
         try (InputStream imageStream = getClass().getResourceAsStream(resourcePath)) {
             if (imageStream == null) {
-                seeOther("/static/images/duke_cool.png");
+                seeOther("/static/images/2027/duke-wave.png");
                 return null;
             }
             byte[] bytes = imageStream.readAllBytes();

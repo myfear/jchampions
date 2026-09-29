@@ -1,215 +1,46 @@
-<!DOCTYPE html PUBLIC
-"-//OPENHTMLTOPDF//DOC XHTML Character Entities Only 1.0//EN" "">
+<!DOCTYPE html PUBLIC "-//OPENHTMLTOPDF//DOC XHTML Character Entities Only 1.0//EN" "">
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>{talk.title} — Talk Card</title>
+  <title>{talk.title} — jChampions {year}</title>
   <style>
-    @font-face {
-    font-family: 'Roboto Mono';
-    font-style: normal;
-    font-weight: 400;
-    src: url('/static/fonts/RobotoMonoRegular.ttf') format('truetype');
-    }
-    @font-face {
-    font-family: 'Roboto Mono';
-    font-style: normal;
-    font-weight: 300;
-    src: url('/static/fonts/RobotoMonoLight.ttf') format('truetype');
-    }
-    @font-face {
-    font-family: 'Roboto Mono';
-    font-style: normal;
-    font-weight: 700;
-    src: url('/static/fonts/RobotoMonoBold.ttf') format('truetype');
-    }
-
-@page {
-  size: 1280px 720px;
-  margin: 0px;
-  padding: 0px;
-}
-
-body {
-    margin: 0px;
-    padding: 0px;
-    width: 1280px;
-    height: 720px;
-    position: relative;
-    overflow: hidden;
-    font-family: "Roboto Mono", monospace;
-    background-image: url('/static/images/background.png');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    color: #ffffff;
-}
-
-/* Top logo - Duke on left */
-#top-logo {
-    position: absolute;
-    top: 30px;
-    left: 30px;
-    z-index: 10;
-    width: 80px;
-    height: 80px;
-}
-
-#top-logo img {
-    width: auto;
-    height: 120px;
-    display: block;
-}
-
-/* Conference banner - orange rounded rectangle on top right with WHITE text */
-.conference-banner {
-    position: absolute;
-    top: 30px;
-    right: 30px;
-    z-index: 10;
-    padding: 12px 24px;
-    border-radius: 12px;
-    background-color: #f38113;
-    font-weight: 400;
-    font-size: 54px;
-    color: #ffffff;
-    font-family: "Roboto Mono", monospace;
-    white-space: nowrap;
-}
-
-/* Talk title - left side, large */
-#talk-title {
-    position: absolute;
-    left: 80px;
-    top: 200px;
-    z-index: 10;
-    width: 650px;
-    font-size: 55px;
-    font-weight: 700;
-    color: #ffffff;
-    line-height: 1.2;
-    font-family: "Roboto Mono", monospace;
-    word-wrap: break-word;
-}
-
-/* Speakers container - right side */
-#speakers-container {
-    position: absolute;
-    right: 100px;
-    top: 180px;
-    z-index: 10;
-    width: 350px;
-}
-
-/* Speaker item - stacked vertically */
-.speaker-item {
-    position: relative;
-    display: block;
-    margin-bottom: 30px;
-    height: 198px;
-    min-height: 198px;
-}
-
-/* Speaker photo - circular with background border */
-.speaker-photo-wrapper {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 168px;
-    height: 168px;
-    border-radius: 50%;
-    z-index: 150;
-    padding: 15px;
-    background-image: url('/static/images/background.png');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-}
-
-.speaker-photo-inner {
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    background-size: cover;
-    background-position: center;
-    overflow: hidden;
-}
-
-/* Speaker name */
-.speaker-name {
-    position: relative;
-    left: 200px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #ffffff;
-    font-family: "Roboto Mono", monospace;
-    font-weight: 400;
-    font-size: 38px;
-    word-wrap: break-word;
-    width: 200px;
-}
-
-/* Schedule - bottom centered */
-.event-block {
-    position: absolute;
-    bottom: 40px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 30px;
-    color: #ffffff;
-    text-align: center;
-    font-family: "Roboto Mono", monospace;
-    z-index: 10;
-    white-space: nowrap;
-}
-
-#event-time {
-    font-size: 35px;
-}
+    {#include Banner/cardStyles.html /}
+    @page { size: 1280px 720px; margin: 0; }
+    .talk-label { position: absolute; left: 56px; top: 182px; width: 730px; }
+    .headline { position: absolute; left: 56px; top: 230px; width: 730px; }
+    .speakers { position: absolute; left: 864px; top: 203px; width: 360px; }
+    .speaker-row { width: 100%; border-collapse: collapse; margin-bottom: 22px; }
+    .speaker-row td { vertical-align: middle; padding: 0; }
+    .photo-cell { width: 114px; }
+    .speaker-photo { width: 92px; height: 92px; border-radius: 50%; background-size: cover; background-position: center; border: 3px solid #FF691B; }
+    .speaker-name { font-size: 24px; font-weight: 600; line-height: 1.25; word-wrap: break-word; }
+    .single .photo-cell { width: 152px; }
+    .single .speaker-photo { width: 128px; height: 128px; }
+    .compact .photo-cell { width: 80px; }
+    .compact .speaker-photo { width: 62px; height: 62px; }
+    .compact .speaker-name { font-size: 20px; }
+    .compact .speaker-row { margin-bottom: 15px; }
+    .many .photo-cell { display: none; }
+    .many .speaker-row { margin-bottom: 10px; }
+    .many .speaker-name { font-size: 18px; }
+    .duke { left: 878px; top: 18px; width: 100px; height: 120px; }
   </style>
 </head>
-
-<body>
-  <!-- Top logo - Duke -->
-  <div id="top-logo">
-    <img src="/static/images/duke_champ.png" alt="Java Champions Duke" />
+<body class="wide light">
+  <img class="brand" src="/static/images/2027/logo-light.png" alt="jChampions Conference" />
+  <div class="year">{year}</div>
+  <div class="header-rule"></div>
+  <div class="eyebrow talk-label">The session</div>
+  <h1 class="headline" style="font-size: {card:fontSize(talk.title, 58, 30, 730, 5)}px">{talk.title}</h1>
+  <div class="speakers {#if talk.speakers.size == 1}single{/if} {#if talk.speakers.size > 3}compact{/if} {#if talk.speakers.size > 5}many{/if}">
+    {#for speaker in talk.speakers}
+      <table class="speaker-row"><tr>
+        <td class="photo-cell"><div class="speaker-photo" style="background-image: url('{uri:Banner.speakerPhoto(speaker.id)}')"></div></td>
+        <td><div class="speaker-name">{speaker.firstName}<br />{speaker.lastName}</div></td>
+      </tr></table>
+    {/for}
   </div>
-
-  <!-- Conference banner -->
-  <div class="conference-banner">
-    jChampions Conference
-  </div>
-
-  <!-- Talk title -->
-  {#if talk != null && talk.title}
-    <div id="talk-title">{talk.title}</div>
-  {/if}
-
-  <!-- Speakers -->
-  <div id="speakers-container">
-    {#if talk != null && talk.speakers != null}
-      {#for speaker in talk.speakers}
-      <div class="speaker-item">
-        <div class="speaker-photo-wrapper">
-          <div class="speaker-photo-inner"
-               {#if speaker.id}
-               style="background-image: url('{uri:Banner.speakerPhoto(speaker.id)}')"
-               {#else}
-               style="background-color: #ff9800;"
-               {/if}
-          ></div>
-        </div>
-        <div class="speaker-name">{speaker.firstName} {speaker.lastName}</div>
-      </div>
-      {/for}
-    {/if}
-  </div>
-
-  <!-- Event time - bottom centered -->
-  {#if talk != null && talk.estTime && talk.cetTime}
-    <div class="event-block" id="event-time">
-      ⏰ {str:formatDate(talk.date)} | {str:formatTime(talk.cetTime)}-{str:addHour(talk.cetTime)} CET | {str:formatTime(talk.estTime)}-{str:addHour(talk.estTime)} EST
-    </div>
-  {/if}
+  <img class="duke" src="/static/images/2027/duke-wave.png" alt="Waving Duke" />
+  {#include Banner/cardFooter.html /}
 </body>
 </html>

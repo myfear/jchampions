@@ -42,6 +42,8 @@ class SpeakerCardsTest {
 
     @Test
     void importsExcelScheduleAndRendersAllCardFormats() throws Exception {
+        assertEquals("Poppins", new java.awt.Font("Poppins", java.awt.Font.BOLD, 12)
+                .getFamily(java.util.Locale.ROOT), "PNG rendering must use the bundled font");
         UUID speakerId = UUID.randomUUID();
         Path schedule = temporaryDirectory.resolve("schedule.xlsx");
         try (var workbook = new XSSFWorkbook()) {
@@ -51,7 +53,7 @@ class SpeakerCardsTest {
             row.createCell(0).setCellValue("987654321");
             row.createCell(1).setCellValue("Java 27 speaker cards");
             row.createCell(2).setCellValue("A rendering smoke test.");
-            row.createCell(8).setCellValue("2026-01-22T10:00:00");
+            row.createCell(8).setCellValue("2027-01-22T10:00:00");
             row.createCell(9).setCellValue("60");
             row.createCell(12).setCellValue(speakerId.toString());
             row.createCell(13).setCellValue("Test");
@@ -74,6 +76,7 @@ class SpeakerCardsTest {
                 assertEquals("Java 27 speaker cards", talk.title);
                 assertEquals("10:00", talk.estTime);
                 assertEquals("16:00", talk.cetTime);
+                assertEquals("2027-01-22", talk.date);
             });
 
             try (var client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).build()) {
@@ -81,6 +84,12 @@ class SpeakerCardsTest {
                         .timeout(Duration.ofSeconds(30)).build(), HttpResponse.BodyHandlers.ofString());
                 assertEquals(200, directory.statusCode());
                 assertTrue(directory.body().contains("Test Speaker"));
+
+                var card = client.send(HttpRequest.newBuilder(baseUri.resolve("/speaker-banner/" + speakerId))
+                        .timeout(Duration.ofSeconds(30)).build(), HttpResponse.BodyHandlers.ofString());
+                assertEquals(200, card.statusCode());
+                assertTrue(card.body().contains("22 January 2027"));
+                assertTrue(card.body().contains("class=\"year\">2027"));
 
                 assertPng(client, "/speaker-banner/" + speakerId + ".png", 1280, 720);
                 assertPng(client, "/talk-banner/987654321.png", 1280, 720);
