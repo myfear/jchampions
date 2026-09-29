@@ -10,19 +10,16 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 import java.util.UUID;
 
 import org.acme.model.Speaker;
 import org.acme.model.Talk;
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.DateUtil;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
 import io.quarkus.runtime.StartupEvent;
@@ -32,6 +29,9 @@ import jakarta.transaction.Transactional;
 
 @ApplicationScoped
 public class ImportFromCSV {
+
+    @ConfigProperty(name = "speaker.photo-directory", defaultValue = "src/main/resources/META-INF/speaker")
+    String photoDirectory;
 
     private static final Logger LOG = Logger.getLogger(ImportFromCSV.class);
 
@@ -91,7 +91,7 @@ public class ImportFromCSV {
                 rowNumber++;
 
                 try {
-                    String[] fields = extractRowData(row);
+                    String[] fields = SessionizeSchedule.fields(row);
                     processRow(fields);
                 } catch (Exception e) {
                     LOG.errorf(e, "Error processing row %d: %s", rowNumber, e.getMessage());
@@ -101,44 +101,6 @@ public class ImportFromCSV {
             LOG.infof("XLSX import completed. Processed %d rows", rowNumber);
         } catch (Exception e) {
             LOG.errorf(e, "Error reading XLSX file: %s", xlsxFilePath);
-        }
-    }
-
-    private String[] extractRowData(Row row) {
-        List<String> fields = new ArrayList<>();
-        // We need at least 23 columns (0-22) for Profile Picture
-        int lastColumn = Math.max(row.getLastCellNum(), 23);
-
-        for (int i = 0; i < lastColumn; i++) {
-            Cell cell = row.getCell(i);
-            fields.add(getCellValueAsString(cell));
-        }
-
-        return fields.toArray(new String[0]);
-    }
-
-    private String getCellValueAsString(Cell cell) {
-        if (cell == null) {
-            return "";
-        }
-
-        switch (cell.getCellType()) {
-            case STRING:
-                return cell.getStringCellValue();
-            case NUMERIC:
-                if (DateUtil.isCellDateFormatted(cell)) {
-                    // Return ISO format date-time string
-                    return cell.getLocalDateTimeCellValue().toString();
-                }
-                return String.valueOf((long) cell.getNumericCellValue());
-            case BOOLEAN:
-                return String.valueOf(cell.getBooleanCellValue());
-            case FORMULA:
-                return cell.getCellFormula();
-            case BLANK:
-                return "";
-            default:
-                return "";
         }
     }
 
@@ -282,7 +244,7 @@ public class ImportFromCSV {
             }
 
             // Target path: src/main/resources/META-INF/speaker/{Speaker Id}.{ext}
-            Path resourcesPath = Paths.get("src/main/resources/META-INF/speaker");
+            Path resourcesPath = Paths.get(photoDirectory);
             Files.createDirectories(resourcesPath);
 
             Path imagePath = resourcesPath.resolve(speakerId.toString() + "." + extension);

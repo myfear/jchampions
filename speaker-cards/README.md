@@ -17,21 +17,32 @@ The motivation and implementation are described in [Automating Conference Assets
 
 ## Run locally
 
-Use IBM Semeru Java 27 and a running Docker or Podman environment for the development PostgreSQL database. Select the project's SDKMAN Java version and start the application:
+Use IBM Semeru Java 27. Select the project's SDKMAN Java version:
 
 ```sh
 sdk env
-./mvnw quarkus:dev
 ```
 
-Place `SelectedWithSchedule.xlsx` in the project root, then import it and generate all cards:
+Place the 2027 Sessionize XLSX export in the project root. Check it and generate the cards (replace `Accepted2027.xlsx` with the export's filename):
 
 ```sh
-curl "http://localhost:8080/api/import/csv/SelectedWithSchedule.xlsx"
-curl "http://localhost:8080/api/banners/generate-all?outputDir=./speaker-banners"
+./cards validate Accepted2027.xlsx
+./cards generate Accepted2027.xlsx --output speaker-banners-2027
 ```
 
-Browse the [local speaker directory](http://localhost:8080/). Generated PNGs are saved under `speaker-banners/` in the `speaker/`, `talks/`, and `social/` folders. The current configuration recreates the database schema on startup.
+`./cards` builds and runs a Quarkus Picocli application. It uses Apache POI for both validation and import, and a temporary in-memory H2 database while generating cards. It starts its PNG renderer for the command and exits when done. No separate server or PostgreSQL container is needed. Output goes into `speaker/`, `talks/`, and `social/` beneath the chosen directory.
+
+`validate` reports row, speaker, talk, and card counts. `generate` exits with an error if the schedule year differs from the branding year or the render count does not match. The supplied `AcceptedV5.xlsx` has 2026 dates; use `--allow-year-mismatch` only for a test run with it.
+
+To save one card for review after importing, use a speaker UUID or talk ID from the export:
+
+```sh
+./cards preview Accepted2027.xlsx talk 1070177 --output preview.png
+./cards preview Accepted2027.xlsx speaker SPEAKER_UUID --output preview.png
+./cards preview Accepted2027.xlsx social SPEAKER_UUID --output preview.png
+```
+
+For the web directory, start `./mvnw quarkus:dev` with Docker or Podman running for its PostgreSQL database, then browse [localhost:8080](http://localhost:8080/). The web configuration recreates its database schema on startup. The importer keeps existing talk details on repeated imports, so restart the web app before importing a changed schedule.
 
 Run `./mvnw verify` to build the application and test Excel import, PostgreSQL persistence, and PNG rendering. Docker or Podman must be running for the test database.
 

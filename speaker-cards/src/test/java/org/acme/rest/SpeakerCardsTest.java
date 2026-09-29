@@ -1,10 +1,12 @@
 package org.acme.rest;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
+import java.awt.image.BufferedImage;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -66,6 +68,7 @@ class SpeakerCardsTest {
         }
 
         importer.importFromCSV(schedule.toString());
+        Path photo = Path.of("src/main/resources/META-INF/speaker", speakerId + ".png");
         try {
             QuarkusTransaction.requiringNew().run(() -> {
                 Speaker speaker = Speaker.findById(speakerId);
@@ -80,6 +83,14 @@ class SpeakerCardsTest {
             });
 
             try (var client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).build()) {
+                Files.createDirectories(photo.getParent());
+                ImageIO.write(new BufferedImage(2, 2, BufferedImage.TYPE_INT_RGB), "png", photo.toFile());
+                byte[] expectedPhoto = Files.readAllBytes(photo);
+                var photoResponse = client.send(HttpRequest.newBuilder(baseUri.resolve("/speaker-photo/" + speakerId))
+                        .timeout(Duration.ofSeconds(30)).build(), HttpResponse.BodyHandlers.ofByteArray());
+                assertEquals(200, photoResponse.statusCode());
+                assertArrayEquals(expectedPhoto, photoResponse.body());
+
                 var directory = client.send(HttpRequest.newBuilder(baseUri)
                         .timeout(Duration.ofSeconds(30)).build(), HttpResponse.BodyHandlers.ofString());
                 assertEquals(200, directory.statusCode());
@@ -96,6 +107,7 @@ class SpeakerCardsTest {
                 assertPng(client, "/speaker-social/" + speakerId + ".png", 1080, 1080);
             }
         } finally {
+            Files.deleteIfExists(photo);
             QuarkusTransaction.requiringNew().run(() -> {
                 Talk.deleteById(987654321L);
                 Speaker.deleteById(speakerId);

@@ -1,6 +1,7 @@
 package org.acme.rest;
 
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.util.List;
 import java.util.UUID;
 
@@ -30,6 +31,9 @@ public class Banner extends Controller {
 
     @ConfigProperty(name = "conference.year", defaultValue = "2027")
     int year;
+
+    @ConfigProperty(name = "speaker.photo-directory", defaultValue = "src/main/resources/META-INF/speaker")
+    String photoDirectory;
 
     @Inject
     BannerGenerationService bannerService;
@@ -128,6 +132,14 @@ public class Banner extends Controller {
         String mimeType = null;
 
         for (String ext : extensions) {
+            java.nio.file.Path file = java.nio.file.Path.of(photoDirectory, id + ext);
+            if (Files.isRegularFile(file)) {
+                try {
+                    return Response.ok(Files.readAllBytes(file), ext.equals(".png") ? "image/png" : "image/jpeg").build();
+                } catch (java.io.IOException e) {
+                    throw new RuntimeException("Error reading speaker image " + file, e);
+                }
+            }
             String testPath = "/META-INF/speaker/" + id + ext;
             InputStream testStream = getClass().getResourceAsStream(testPath);
             if (testStream != null) {

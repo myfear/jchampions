@@ -87,6 +87,10 @@
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-picocli</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
             <artifactId>quarkus-junit</artifactId>
             <scope>test</scope>
         </dependency>
@@ -153,6 +157,20 @@
     </build>
 
     <profiles>
+        <profile>
+            <id>cards-cli</id>
+            <properties>
+                <quarkus.profile>cards-cli</quarkus.profile>
+                <quarkus.package.main-class>cards</quarkus.package.main-class>
+                <quarkus.package.output-directory>cards-app</quarkus.package.output-directory>
+            </properties>
+            <dependencies>
+                <dependency>
+                    <groupId>io.quarkus</groupId>
+                    <artifactId>quarkus-jdbc-h2</artifactId>
+                </dependency>
+            </dependencies>
+        </profile>
         <profile>
             <id>native</id>
             <activation>

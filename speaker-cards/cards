@@ -1,0 +1,23 @@
+#!/bin/sh
+set -eu
+
+project_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+cd "$project_dir"
+runner=target/cards-app/quarkus-run.jar
+
+if [ ! -f "$runner" ] || [ -n "$(find pom.xml src/main \
+    -path src/main/resources/META-INF/speaker -prune -o \
+    -type f -newer "$runner" -print -quit)" ]; then
+    ./mvnw -q -Pcards-cli -DskipTests package
+fi
+
+if [ "$#" -eq 0 ]; then
+    set -- --help
+fi
+
+if [ "$1" = validate ] || [ "$1" = --help ]; then
+    exec java -Djava.awt.headless=true -Dquarkus.profile=cards-cli \
+        -Dquarkus.http.host-enabled=false -jar "$runner" "$@"
+fi
+
+exec java -Djava.awt.headless=true -Dquarkus.profile=cards-cli -jar "$runner" "$@"
