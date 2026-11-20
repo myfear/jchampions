@@ -1,6 +1,5 @@
 package org.acme.cli;
 
-import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -15,7 +14,8 @@ import java.util.concurrent.Callable;
 
 import org.acme.service.BannerGenerationResult;
 import org.acme.service.BannerGenerationService;
-import org.acme.startup.ImportFromCSV;
+import org.acme.startup.SessionizeCache;
+import org.acme.startup.SessionizeImporter;
 import org.acme.startup.SessionizeSchedule;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
@@ -24,9 +24,9 @@ import jakarta.inject.Inject;
 import picocli.CommandLine;
 
 @TopCommand
-@CommandLine.Command(name = "cards", description = "Generate jChampions speaker cards from Sessionize exports",
+@CommandLine.Command(name = "cards", description = "Generate jChampions speaker cards from Sessionize",
         mixinStandardHelpOptions = true,
-        subcommands = {CardsCommand.Validate.class, CardsCommand.Generate.class, CardsCommand.Preview.class})
+        subcommands = {CardsCommand.Refresh.class, CardsCommand.Validate.class, CardsCommand.Generate.class, CardsCommand.Preview.class})
 public class CardsCommand implements Runnable {
 
     @CommandLine.Spec
@@ -37,21 +37,38 @@ public class CardsCommand implements Runnable {
         spec.commandLine().usage(System.out);
     }
 
-    private static SessionizeSchedule.Summary inspect(SessionizeSchedule schedules, Path schedule) throws IOException {
-        SessionizeSchedule.Summary summary = schedules.inspect(schedule);
-        System.out.printf("Valid Sessionize export: %d rows, %d speakers, %d talks, %d cards%n",
-                summary.rows(), summary.speakers(), summary.talks(), summary.cards());
-        System.out.println("Schedule years: " + summary.years());
+    private static SessionizeSchedule.Summary report(SessionizeSchedule schedule) {
+        var summary = schedule.summary();
+        System.out.printf("%d sessions, %d skipped, %d speakers, %d cards%n",
+                summary.sessions(), summary.skipped(), summary.speakers(), summary.cards());
+        System.out.println(summary.years().isEmpty() ? "Session times have not been published."
+                : "Schedule years: " + summary.years());
         return summary;
     }
 
-    @CommandLine.Command(name = "validate", description = "Check an XLSX export without importing", mixinStandardHelpOptions = true)
-    public static class Validate implements Callable<Integer> {
-        @CommandLine.Parameters(index = "0", description = "Sessionize XLSX export")
-        Path schedule;
-
+    @CommandLine.Command(name = "refresh", description = "Refresh the local Sessionize cache", mixinStandardHelpOptions = true)
+    public static class Refresh implements Callable<Integer> {
         @Inject
-        SessionizeSchedule schedules;
+        SessionizeCache cache;
+
+        @Override
+        public Integer call() {
+            try {
+                var snapshot = cache.refresh();
+                report(snapshot.schedule());
+                System.out.println("Refreshed " + snapshot.path());
+                return 0;
+            } catch (Exception e) {
+                System.err.println("cards: " + e.getMessage());
+                return 1;
+            }
+        }
+    }
+
+    @CommandLine.Command(name = "validate", description = "Check the Sessionize schedule without importing", mixinStandardHelpOptions = true)
+    public static class Validate implements Callable<Integer> {
+        @Inject
+        SessionizeCache cache;
 
         @ConfigProperty(name = "conference.year")
         int year;
@@ -59,8 +76,9 @@ public class CardsCommand implements Runnable {
         @Override
         public Integer call() {
             try {
-                SessionizeSchedule.Summary summary = inspect(schedules, schedule);
-                if (!summary.years().equals(Set.of(year))) {
+                var schedule = cache.load().schedule();
+                var summary = report(schedule);
+                if (summary.hasYearMismatch(year)) {
                     System.err.printf("Warning: schedule years %s differ from card branding year %d%n", summary.years(), year);
                 }
                 return 0;
@@ -71,11 +89,8 @@ public class CardsCommand implements Runnable {
         }
     }
 
-    @CommandLine.Command(name = "generate", description = "Import an XLSX export and write every card", mixinStandardHelpOptions = true)
+    @CommandLine.Command(name = "generate", description = "Import the Sessionize schedule and write every card", mixinStandardHelpOptions = true)
     public static class Generate implements Callable<Integer> {
-        @CommandLine.Parameters(index = "0", description = "Sessionize XLSX export")
-        Path schedule;
-
         @CommandLine.Option(names = "--output", description = "Output directory (default: speaker-banners-YEAR)")
         Path output;
 
@@ -83,10 +98,10 @@ public class CardsCommand implements Runnable {
         boolean allowYearMismatch;
 
         @Inject
-        SessionizeSchedule schedules;
+        SessionizeCache cache;
 
         @Inject
-        ImportFromCSV importer;
+        SessionizeImporter importer;
 
         @Inject
         BannerGenerationService banners;
@@ -97,13 +112,14 @@ public class CardsCommand implements Runnable {
         @Override
         public Integer call() {
             try {
-                SessionizeSchedule.Summary summary = inspect(schedules, schedule);
-                if (!allowYearMismatch && !summary.years().equals(Set.of(year))) {
+                var schedule = cache.load().schedule();
+                var summary = report(schedule);
+                if (!allowYearMismatch && summary.hasYearMismatch(year)) {
                     throw new IllegalArgumentException("Schedule years differ from " + year
                             + ". Use --allow-year-mismatch for a test run");
                 }
                 Path destination = output == null ? Path.of("speaker-banners-" + year) : output;
-                importer.importFromCSV(schedule.toAbsolutePath().toString());
+                importer.importSchedule(schedule);
                 BannerGenerationResult result = banners.generateAllBanners(destination.toString());
                 Set<String> distinctFiles = new HashSet<>(result.getSavedFiles());
                 System.out.printf("Generated %d cards in %s%n", result.getSuccessCount(), destination.toAbsolutePath());
@@ -123,15 +139,12 @@ public class CardsCommand implements Runnable {
         }
     }
 
-    @CommandLine.Command(name = "preview", description = "Import an XLSX export and save one PNG", mixinStandardHelpOptions = true)
+    @CommandLine.Command(name = "preview", description = "Import the Sessionize schedule and save one PNG", mixinStandardHelpOptions = true)
     public static class Preview implements Callable<Integer> {
-        @CommandLine.Parameters(index = "0", description = "Sessionize XLSX export")
-        Path schedule;
-
-        @CommandLine.Parameters(index = "1", description = "speaker, talk, or social")
+        @CommandLine.Parameters(index = "0", description = "speaker, talk, or social")
         Kind kind;
 
-        @CommandLine.Parameters(index = "2", description = "Speaker UUID or talk ID")
+        @CommandLine.Parameters(index = "1", description = "Speaker UUID or talk ID")
         String id;
 
         @CommandLine.Option(names = "--output", required = true, description = "PNG destination")
@@ -141,10 +154,10 @@ public class CardsCommand implements Runnable {
         boolean allowYearMismatch;
 
         @Inject
-        SessionizeSchedule schedules;
+        SessionizeCache cache;
 
         @Inject
-        ImportFromCSV importer;
+        SessionizeImporter importer;
 
         @ConfigProperty(name = "conference.year")
         int year;
@@ -157,8 +170,9 @@ public class CardsCommand implements Runnable {
         @Override
         public Integer call() {
             try {
-                SessionizeSchedule.Summary summary = inspect(schedules, schedule);
-                if (!allowYearMismatch && !summary.years().equals(Set.of(year))) {
+                var schedule = cache.load().schedule();
+                var summary = report(schedule);
+                if (!allowYearMismatch && summary.hasYearMismatch(year)) {
                     throw new IllegalArgumentException("Schedule years differ from " + year
                             + ". Use --allow-year-mismatch for a test run");
                 }
@@ -167,7 +181,7 @@ public class CardsCommand implements Runnable {
                     case speaker -> "/speaker-banner/" + UUID.fromString(id) + ".png";
                     case social -> "/speaker-social/" + UUID.fromString(id) + ".png";
                 };
-                importer.importFromCSV(schedule.toAbsolutePath().toString());
+                importer.importSchedule(schedule);
                 HttpRequest request = HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + endpoint))
                         .timeout(Duration.ofSeconds(30)).GET().build();
                 byte[] png;

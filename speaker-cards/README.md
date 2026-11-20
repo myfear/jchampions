@@ -4,12 +4,12 @@ A Java application that generates speaker cards, talk banners, and social images
 
 ## What it does
 
-- Imports speakers and talks from a Sessionize Excel schedule export and downloads speaker photos.
+- Imports scheduled and accepted talks and their speakers from the Sessionize API and downloads missing speaker photos.
 - Stores speaker and session data in PostgreSQL.
 - Renders HTML templates as PNG images, individually or in a batch.
 - Provides a local speaker directory with links to the generated cards.
 
-Built with Quarkus, Renarde, Qute templates, Hibernate ORM with Panache, and Apache POI.
+Built with Quarkus, Renarde, Qute templates, Hibernate ORM with Panache, and Jackson.
 
 ## Background
 
@@ -17,34 +17,60 @@ The motivation and implementation are described in [Automating Conference Assets
 
 ## Run locally
 
-Use IBM Semeru Java 27. Select the project's SDKMAN Java version:
+Run these commands from the `speaker-cards` directory using IBM Semeru Java 27.
 
 ```sh
+sdk env install
 sdk env
+./cards validate
+./cards generate --output speaker-banners-2027
 ```
 
-Place the 2027 Sessionize XLSX export in the project root. Check it and generate the cards (replace `Accepted2027.xlsx` with the export's filename):
+The first command that needs schedule data makes one GET to the [Sessionize All endpoint](https://sessionize.com/api/v2/tnkvbkcy/view/All) and saves the validated response in `.cache/sessionize-all.json`. Subsequent commands can use that file offline. The web app also reuses the parsed schedule in memory. Override `sessionize.url` and `sessionize.cache-file` with Quarkus configuration or the environment variables `SESSIONIZE_URL` and `SESSIONIZE_CACHE_FILE`.
+
+Run `./cards refresh` to fetch a new snapshot. Refresh validates the response before atomically replacing the file. If Sessionize is unavailable or the feed is empty, invalid, or has no eligible talks, the command exits with an error and preserves the last successful snapshot.
+
+`validate` reports included sessions, skipped sessions, unique speakers, expected cards, and any published schedule years. Each speaker gets two cards and each talk gets one. `generate` checks the year against the card branding and verifies the number of distinct files written. Use `--allow-year-mismatch` on `generate` or `preview` for a test run with another year's schedule.
+
+`./cards` builds and runs the Quarkus CLI. Generation and preview use an in-memory H2 database and start a local PNG renderer. Batch output goes into `speaker/`, `talks/`, and `social/` beneath the selected directory. Speaker filenames use `LastName_FirstName.png`. Talk filenames start with the speakers’ surnames in alphabetical order, joined by underscores, followed by up to six words of the title (48 UTF-8 bytes). For example, `Grzesik_Pałka_fast-pain-free-java-and-native.png`. When two filenames would match, each gets its Sessionize ID as a suffix.
+
+To render a single card, use a talk ID or speaker UUID from the cached JSON.
 
 ```sh
-./cards validate Accepted2027.xlsx
-./cards generate Accepted2027.xlsx --output speaker-banners-2027
+./cards preview talk 1070177 --output preview.png
+./cards preview speaker SPEAKER_UUID --output preview.png
+./cards preview social SPEAKER_UUID --output preview.png
 ```
 
-`./cards` builds and runs a Quarkus Picocli application. It uses Apache POI for both validation and import, and a temporary in-memory H2 database while generating cards. It starts its PNG renderer for the command and exits when done. No separate server or PostgreSQL container is needed. Output goes into `speaker/`, `talks/`, and `social/` beneath the chosen directory.
+## Web directory
 
-`validate` reports row, speaker, talk, and card counts. `generate` exits with an error if the schedule year differs from the branding year or the render count does not match. The supplied `AcceptedV5.xlsx` has 2026 dates; use `--allow-year-mismatch` only for a test run with it.
-
-To save one card for review after importing, use a speaker UUID or talk ID from the export:
+Start `./mvnw quarkus:dev` with Docker or Podman running for PostgreSQL. The app recreates its database schema on startup and waits for an explicit import. The POST endpoints use Renarde's CSRF protection. Read the token from the [local speaker directory](http://localhost:8080/) and send it with the request. Import uses the current cache, fetching once if the file is missing.
 
 ```sh
-./cards preview Accepted2027.xlsx talk 1070177 --output preview.png
-./cards preview Accepted2027.xlsx speaker SPEAKER_UUID --output preview.png
-./cards preview Accepted2027.xlsx social SPEAKER_UUID --output preview.png
+token=$(curl -fsS -o /dev/null -c - http://localhost:8080/ | awk '$6 == "csrf-token" {print $7}')
+sessionize_post() {
+    curl --fail-with-body -X POST -b "csrf-token=$token" -H "X-CSRF-TOKEN: $token" \
+        "http://localhost:8080/api/sessionize/$1"
+}
+sessionize_post import
 ```
 
-For the web directory, start `./mvnw quarkus:dev` with Docker or Podman running for its PostgreSQL database, then browse [localhost:8080](http://localhost:8080/). The web configuration recreates its database schema on startup. The importer keeps existing talk details on repeated imports, so restart the web app before importing a changed schedule.
+To apply a schedule change, refresh the cache and then import it.
 
-Run `./mvnw verify` to build the application and test Excel import, PostgreSQL persistence, and PNG rendering. Docker or Podman must be running for the test database.
+```sh
+sessionize_post refresh
+sessionize_post import
+```
+
+Refresh returns the cache path, timestamp, and summary. Import returns the summary after updating PostgreSQL. Both endpoints return HTTP 502 for an upstream request failure and 422 for invalid or empty schedule data.
+
+## Sessionize field mapping
+
+Accepted talks with speakers can generate cards before the timetable is published. Their cards omit the date and time. Once Sessionize publishes the times, run `./cards refresh` and `./cards generate` to include them. Service sessions, talks without speakers, and unscheduled talks without accepted status are skipped. Import joins each included session's speaker UUIDs to the feed's speaker records. It updates names, taglines, optional biographies, titles, descriptions, live links, and talk membership on repeated imports. Talks and speakers absent from the latest schedule stay in the database. Missing photos use the existing Duke artwork until a photo is available.
+
+Session times with an explicit offset use that offset. Times without one use `America/New_York`. The card shows the local times in New York and Paris and takes its date from Paris. The duration in minutes comes from `endsAt - startsAt`, and `liveUrl` supplies the talk's live link.
+
+Run `./mvnw verify` with Docker or Podman running to test caching, PostgreSQL import, and PNG rendering. The tests use local Sessionize fixtures.
 
 ## 2027 artwork
 

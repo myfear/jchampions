@@ -29,7 +29,6 @@ public class Speaker extends PanacheEntityBase implements Comparable<Speaker> {
         public String lastName;
         public String title;
         @JdbcTypeCode(Types.LONGVARCHAR)
-        @NotBlank
         @Length(max = 10000)
         public String biography;
         public String company;

@@ -12,10 +12,10 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
         <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
-        <quarkus.platform.version>3.39.5</quarkus.platform.version>
+        <quarkus.platform.version>3.40.1</quarkus.platform.version>
         <skipITs>true</skipITs>
-        <renarde.version>3.1.8</renarde.version>
-        <surefire-plugin.version>3.6.0</surefire-plugin.version>
+        <renarde.version>3.1.10</renarde.version>
+        <surefire-plugin.version>3.6.1</surefire-plugin.version>
     </properties>
 
     <dependencyManagement>
@@ -72,19 +72,14 @@
           <dependency>
             <groupId>org.mvnpm</groupId>
             <artifactId>bootstrap-icons</artifactId>
-            <version>1.13.1</version>
+            <version>1.13.2</version>
             <scope>provided</scope>
           </dependency>
           <dependency>
             <groupId>io.quarkiverse.web-bundler</groupId>
             <artifactId>quarkus-web-bundler</artifactId>
-            <version>2.3.4</version>
+            <version>3.0.0</version>
           </dependency>
-        <dependency>
-            <groupId>io.quarkiverse.poi</groupId>
-            <artifactId>quarkus-poi</artifactId>
-            <version>2.2.1</version>
-        </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-picocli</artifactId>

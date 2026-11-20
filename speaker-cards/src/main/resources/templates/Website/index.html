@@ -90,7 +90,7 @@
                         <i class="bi bi-eye me-1"></i>
                         View
                       </a>
-                      <a href="{uri:Banner.banner(speaker.id)}" download="speaker-{speaker.id}.png" class="btn btn-outline-primary" title="Download Speaker Banner PNG">
+                      <a href="{uri:Banner.banner(speaker.id)}" download="{speakerNames.get(speaker.id)}" class="btn btn-outline-primary" title="Download Speaker Banner PNG">
                         <i class="bi bi-download"></i>
                       </a>
                     </div>
@@ -100,7 +100,7 @@
                         <i class="bi bi-eye me-1"></i>
                         View
                       </a>
-                      <a href="{uri:Banner.talkBannerPng(speaker.talks.get(0).id)}" download="talk-{speaker.talks.get(0).id}.png" class="btn btn-outline-success" title="Download Talk Banner PNG">
+                      <a href="{uri:Banner.talkBannerPng(speaker.talks.get(0).id)}" download="{talkNames.get(speaker.talks.get(0).id)}" class="btn btn-outline-success" title="Download Talk Banner PNG">
                         <i class="bi bi-download"></i>
                       </a>
                     </div>

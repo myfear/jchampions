@@ -15,7 +15,7 @@ if [ "$#" -eq 0 ]; then
     set -- --help
 fi
 
-if [ "$1" = validate ] || [ "$1" = --help ]; then
+if [ "$1" = refresh ] || [ "$1" = validate ] || [ "$1" = --help ]; then
     exec java -Djava.awt.headless=true -Dquarkus.profile=cards-cli \
         -Dquarkus.http.host-enabled=false -jar "$runner" "$@"
 fi

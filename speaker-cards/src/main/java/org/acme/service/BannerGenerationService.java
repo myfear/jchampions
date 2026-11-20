@@ -113,16 +113,12 @@ public class BannerGenerationService {
         
         BannerGenerationResult result = new BannerGenerationResult();
         
+        var speakerNames = CardFilenames.speakers(speakers);
         for (Speaker speaker : speakers) {
             try {
                 byte[] bannerData = generateSpeakerBannerData(speaker);
                 
-                // Save to file
-                String filename = String.format("%s_%s_%s.png", 
-                    sanitizeFilename(speaker.firstName), 
-                    sanitizeFilename(speaker.lastName), 
-                    speaker.id.toString());
-                Path filePath = outputPath.resolve(filename);
+                Path filePath = outputPath.resolve(speakerNames.get(speaker.id));
                 
                 Files.write(filePath, bannerData);
                 
@@ -168,11 +164,11 @@ public class BannerGenerationService {
         
         BannerGenerationResult result = new BannerGenerationResult();
         
-        // Generate speaker banners: outputDir/speaker/<speakerID>.png
+        var speakerNames = CardFilenames.speakers(speakers);
         for (Speaker speaker : speakers) {
             try {
                 byte[] bannerData = generateSpeakerBannerData(speaker);
-                Path filePath = speakerDir.resolve(speaker.id.toString() + ".png");
+                Path filePath = speakerDir.resolve(speakerNames.get(speaker.id));
                 Files.write(filePath, bannerData);
                 
                 result.addSuccess(speaker.id, speaker.toString(), bannerData.length);
@@ -184,11 +180,11 @@ public class BannerGenerationService {
             }
         }
         
-        // Generate talk banners: outputDir/talks/<talkID>.png
+        var talkNames = CardFilenames.talks(talks);
         for (Talk talk : talks) {
             try {
                 byte[] bannerData = generateTalkBannerData(talk);
-                Path filePath = talksDir.resolve(talk.id.toString() + ".png");
+                Path filePath = talksDir.resolve(talkNames.get(talk.id));
                 Files.write(filePath, bannerData);
                 
                 result.addSuccess(null, talk.title, bannerData.length);
@@ -200,14 +196,11 @@ public class BannerGenerationService {
             }
         }
         
-        // Generate speaker social banners: outputDir/social/<speaker.lastName>_<speaker.firstName>.png
+        var socialNames = CardFilenames.social(speakers);
         for (Speaker speaker : speakers) {
             try {
                 byte[] bannerData = generateSpeakerSocialBannerData(speaker);
-                String filename = String.format("%s_%s.png", 
-                    sanitizeFilename(speaker.lastName), 
-                    sanitizeFilename(speaker.firstName));
-                Path filePath = socialDir.resolve(filename);
+                Path filePath = socialDir.resolve(socialNames.get(speaker.id));
                 Files.write(filePath, bannerData);
                 
                 result.addSuccess(speaker.id, speaker.toString(), bannerData.length);
@@ -297,14 +290,6 @@ public class BannerGenerationService {
         }
         
         return response.body();
-    }
-    
-    /**
-     * Sanitize filename to remove invalid characters
-     */
-    private String sanitizeFilename(String filename) {
-        if (filename == null) return "unknown";
-        return filename.replaceAll("[^a-zA-Z0-9._-]", "_");
     }
     
     /**
