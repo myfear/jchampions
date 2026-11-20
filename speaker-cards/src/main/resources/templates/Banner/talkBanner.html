@@ -6,16 +6,21 @@
   <style>
     {#include Banner/cardStyles.html /}
     @page { size: 1280px 720px; margin: 0; }
-    .talk-label { position: absolute; left: 56px; top: 182px; width: 730px; }
-    .headline { position: absolute; left: 56px; top: 230px; width: 730px; }
-    .speakers { position: absolute; left: 864px; top: 203px; width: 360px; }
+    .talk-body { position: absolute; left: 56px; top: 168px; width: 1168px; table-layout: fixed; border-collapse: collapse; }
+    .body-cell { height: 440px; padding: 0; vertical-align: middle; }
+    .title-cell { width: 808px; }
+    .talk-label { margin-bottom: 15px; }
+    .headline { width: 730px; }
+    .speakers { width: 360px; }
     .speaker-row { width: 100%; border-collapse: collapse; margin-bottom: 22px; }
     .speaker-row td { vertical-align: middle; padding: 0; }
+    .speaker-row:last-child { margin-bottom: 0; }
     .photo-cell { width: 114px; }
     .speaker-photo { width: 92px; height: 92px; border-radius: 50%; background-size: cover; background-position: center; border: 3px solid #FF691B; }
     .speaker-name { font-size: 24px; font-weight: 600; line-height: 1.25; word-wrap: break-word; }
-    .single .photo-cell { width: 152px; }
-    .single .speaker-photo { width: 128px; height: 128px; }
+    .single .photo-cell { width: 164px; }
+    .single .speaker-name { font-size: 27px; }
+    .single .speaker-photo { width: 140px; height: 140px; }
     .compact .photo-cell { width: 80px; }
     .compact .speaker-photo { width: 62px; height: 62px; }
     .compact .speaker-name { font-size: 20px; }
@@ -30,16 +35,22 @@
   <img class="brand" src="/static/images/2027/logo-light.png" alt="jChampions Conference" />
   <div class="year">{year}</div>
   <div class="header-rule"></div>
-  <div class="eyebrow talk-label">The session</div>
-  <h1 class="headline" style="font-size: {card:fontSize(talk.title, 58, 30, 730, 5)}px">{talk.title}</h1>
-  <div class="speakers {#if talk.speakers.size == 1}single{/if} {#if talk.speakers.size > 3}compact{/if} {#if talk.speakers.size > 5}many{/if}">
-    {#for speaker in talk.speakers}
-      <table class="speaker-row"><tr>
-        <td class="photo-cell"><div class="speaker-photo" style="background-image: url('{uri:Banner.speakerPhoto(speaker.id)}')"></div></td>
-        <td><div class="speaker-name">{speaker.firstName}<br />{speaker.lastName}</div></td>
-      </tr></table>
-    {/for}
-  </div>
+  <table class="talk-body" role="presentation"><tr>
+    <td class="body-cell title-cell">
+      <div class="eyebrow talk-label">The session</div>
+      <h1 class="headline" style="font-size: {card:fontSize(talk.title, 58, 30, 730, 5)}px">{talk.title}</h1>
+    </td>
+    <td class="body-cell">
+      <div class="speakers {#if talk.speakers.size == 1}single{/if} {#if talk.speakers.size > 3}compact{/if} {#if talk.speakers.size > 5}many{/if}">
+        {#for speaker in talk.speakers}
+          <table class="speaker-row"><tr>
+            <td class="photo-cell"><div class="speaker-photo" style="background-image: url('{uri:Banner.speakerPhoto(speaker.id)}')"></div></td>
+            <td><div class="speaker-name">{speaker.firstName}<br />{speaker.lastName}</div></td>
+          </tr></table>
+        {/for}
+      </div>
+    </td>
+  </tr></table>
   <img class="duke" src="/static/images/2027/duke-wave.png" alt="Waving Duke" />
   {#include Banner/cardFooter.html /}
 </body>

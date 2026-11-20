@@ -158,6 +158,34 @@ class SpeakerCardsTest {
         }
     }
 
+    @Test
+    void featuresTheSameTalkForAMultiSessionSpeaker() {
+        UUID id = UUID.randomUUID();
+        QuarkusTransaction.requiringNew().run(() -> {
+            var speaker = new Speaker();
+            speaker.id = id;
+            speaker.lastName = "Panelist";
+            speaker.persist();
+            for (long sessionId : new long[]{902L, 901L}) {
+                var talk = new Talk();
+                talk.id = sessionId;
+                talk.title = "Session " + sessionId;
+                talk.speakers.add(speaker);
+                talk.persist();
+            }
+        });
+        try {
+            QuarkusTransaction.requiringNew().run(() ->
+                    assertEquals(901L, Speaker.<Speaker>findById(id).talks.getFirst().id));
+        } finally {
+            QuarkusTransaction.requiringNew().run(() -> {
+                Talk.deleteById(901L);
+                Talk.deleteById(902L);
+                Speaker.deleteById(id);
+            });
+        }
+    }
+
     private HttpResponse<String> post(HttpClient client, String action) throws Exception {
         var request = HttpRequest.newBuilder(baseUri.resolve("/api/sessionize/" + action))
                 .header("Cookie", "csrf-token=" + csrfToken).header("X-CSRF-TOKEN", csrfToken)

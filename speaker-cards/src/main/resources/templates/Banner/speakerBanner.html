@@ -9,7 +9,8 @@
     .speaker-label { position: absolute; left: 56px; top: 175px; width: 380px; }
     .portrait-ring { left: 56px; top: 214px; width: 380px; height: 380px; }
     .portrait { left: 100px; top: 258px; width: 292px; height: 292px; }
-    .speaker-info { position: absolute; left: 490px; top: 218px; width: 656px; }
+    .speaker-info { position: absolute; left: 490px; top: 204px; width: 656px; border-collapse: collapse; }
+    .speaker-info td { height: 400px; padding: 0; vertical-align: middle; }
     .name { margin-bottom: 14px; }
     .role { margin-bottom: 27px; }
     .talk-label { margin-bottom: 10px; }
@@ -24,14 +25,14 @@
   <div class="eyebrow speaker-label">Meet the speaker</div>
   <div class="portrait" style="background-image: url('{uri:Banner.speakerPhoto(speaker.id)}')"></div>
   <img class="portrait-ring" src="/static/images/2027/portrait-ring-dark.png" alt="" />
-  <div class="speaker-info">
+  <table class="speaker-info" role="presentation"><tr><td>
     <h1 class="name" style="font-size: {card:fontSize(speaker.toString(), 62, 34, 656, 2)}px">{speaker.firstName} {speaker.lastName}</h1>
-    {#if speaker.title}<p class="role" style="font-size: {card:fontSize(speaker.title, 22, 16, 630, 2)}px">{speaker.title}</p>{/if}
+    {#if speaker.title}<p class="role" style="font-size: {card:fontSize(speaker.title, 22, 16, 656, 3)}px">{speaker.title}</p>{/if}
     {#if talk != null && talk.title}
       <div class="eyebrow talk-label">Speaking about</div>
       <h2 class="talk-title" style="font-size: {card:fontSize(talk.title, 30, 20, 610, 3)}px">{talk.title}</h2>
     {/if}
-  </div>
+  </td></tr></table>
   <img class="duke" src="/static/images/2027/duke-wave.png" alt="Waving Duke" />
   {#include Banner/cardFooter.html /}
 </body>

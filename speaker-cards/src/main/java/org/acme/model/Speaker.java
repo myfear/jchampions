@@ -15,6 +15,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.validation.constraints.NotBlank;
@@ -50,6 +51,8 @@ public class Speaker extends PanacheEntityBase implements Comparable<Speaker> {
         /** Est-ce que ce speaker mérite d'être sur la page d'accueil ? */
         public boolean star;
 
+        // Cards and directory links feature the first talk in this list.
+        @OrderBy("id ASC")
         @ManyToMany(mappedBy = "speakers")
         public List<Talk> talks = new ArrayList<Talk>();
 
